@@ -92,7 +92,7 @@ export async function getVoteBySession(
   return row ? parseVote(row) : null
 }
 
-export async function createVote(
+export async function upsertVote(
   db: Bindings['DB'],
   ballotId: number,
   voterName: string,
@@ -101,7 +101,11 @@ export async function createVote(
 ): Promise<Vote> {
   const result = await db
     .prepare(
-      'INSERT INTO votes (ballot_id, voter_name, session_id, ratings) VALUES (?, ?, ?, ?) RETURNING *'
+      `INSERT INTO votes (ballot_id, voter_name, session_id, ratings)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(ballot_id, session_id)
+       DO UPDATE SET voter_name = excluded.voter_name, ratings = excluded.ratings
+       RETURNING *`
     )
     .bind(ballotId, voterName, sessionId, JSON.stringify(ratings))
     .first()

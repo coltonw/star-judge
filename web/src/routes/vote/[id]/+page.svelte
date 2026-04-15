@@ -3,6 +3,7 @@
   import { page } from '$app/state'
   import { goto } from '$app/navigation'
   import { getBallot, castVote, getSessionId, checkVoted, ApiError } from '$lib/api'
+  import type { ExistingVote } from '$lib/api'
   import { GRADES, GRADE_LABELS, GRADE_COLORS, type Grade, type Ballot } from '$lib/types'
 
   const ballotId = $derived(parseInt(page.params.id, 10))
@@ -10,9 +11,15 @@
   let ballot = $state<Ballot | null>(null)
   let ratings = $state<Record<string, Grade>>({})
   let voterName = $state('')
+  let nameTouched = $state(false)
+  let isUpdate = $state(false)
   let loading = $state(true)
   let submitting = $state(false)
   let error = $state('')
+
+  let nameError = $derived(
+    nameTouched && !voterName.trim() ? 'Please enter your name.' : ''
+  )
 
   onMount(async () => {
     try {
@@ -22,15 +29,17 @@
         loading = false
         return
       }
-      // Check if already voted
-      const { hasVoted } = await checkVoted(ballotId, getSessionId())
-      if (hasVoted) {
-        goto(`/tally/${ballotId}`)
-        return
-      }
-      // Initialize all ratings to empty
-      for (const c of ballot.candidates) {
-        ratings[c.id] = 'good'
+      // Pre-fill form if session already voted
+      const existing = await checkVoted(ballotId, getSessionId())
+      if (existing.hasVoted) {
+        isUpdate = true
+        voterName = existing.voterName
+        ratings = existing.ratings as Record<string, Grade>
+      } else {
+        // Default all ratings to 'good' so the form is never blank
+        for (const c of ballot.candidates) {
+          ratings[c.id] = 'good'
+        }
       }
     } catch (e) {
       error = e instanceof ApiError ? e.message : 'Failed to load ballot.'
@@ -45,6 +54,7 @@
   }
 
   async function submit() {
+    nameTouched = true
     if (!ballot || !voterName.trim() || !allRated()) return
     submitting = true
     error = ''
@@ -72,7 +82,13 @@
 {:else if ballot}
   <div class="page-header">
     <h1>{ballot.name}</h1>
-    <p>Rate each game — the same scale feeds both Majority Judgment and STAR results.</p>
+    <p>
+      {#if isUpdate}
+        Your previous ratings are pre-filled — adjust anything and resubmit.
+      {:else}
+        Rate each game — the same scale feeds both Majority Judgment and STAR results.
+      {/if}
+    </p>
   </div>
 
   <form onsubmit={(e) => { e.preventDefault(); submit() }}>
@@ -83,9 +99,14 @@
         type="text"
         placeholder="e.g. Alice"
         bind:value={voterName}
+        onblur={() => (nameTouched = true)}
         maxlength="100"
-        required
+        aria-invalid={!!nameError}
+        aria-describedby={nameError ? 'name-error' : undefined}
       />
+      {#if nameError}
+        <p id="name-error" class="field-error">{nameError}</p>
+      {/if}
     </div>
 
     <div class="games">
@@ -126,9 +147,9 @@
       <button
         type="submit"
         class="btn btn-primary"
-        disabled={submitting || !voterName.trim() || !allRated()}
+        disabled={submitting}
       >
-        {submitting ? 'Submitting…' : 'Submit Vote'}
+        {submitting ? 'Submitting…' : isUpdate ? 'Update Vote' : 'Submit Vote'}
       </button>
       <a href="/tally/{ballot.id}" class="btn btn-ghost">See results without voting</a>
     </div>
@@ -210,5 +231,15 @@
     align-items: center;
     gap: 1rem;
     flex-wrap: wrap;
+  }
+
+  .field-error {
+    color: var(--danger);
+    font-size: .82rem;
+    margin-top: .3rem;
+  }
+
+  input[aria-invalid="true"] {
+    border-color: var(--danger);
   }
 </style>

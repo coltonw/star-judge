@@ -77,7 +77,16 @@ export function castVote(
   })
 }
 
-export function checkVoted(ballotId: number, sessionId: string): Promise<{ hasVoted: boolean }> {
+export interface ExistingVote {
+  hasVoted: true
+  voterName: string
+  ratings: Record<string, string>
+}
+
+export function checkVoted(
+  ballotId: number,
+  sessionId: string
+): Promise<{ hasVoted: false } | ExistingVote> {
   return request(`/api/votes/check?ballotId=${ballotId}&sessionId=${encodeURIComponent(sessionId)}`)
 }
 
