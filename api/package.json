@@ -5,7 +5,8 @@
     "dev": "wrangler dev",
     "build": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy",
-    "db:migrate": "wrangler d1 execute star-judge-db --file=src/db/schema.sql"
+    "db:migrate": "wrangler d1 execute star-judge-db --file=src/db/schema.sql",
+    "db:migrate:local": "wrangler d1 execute star-judge-db --local --file=src/db/schema.sql"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
