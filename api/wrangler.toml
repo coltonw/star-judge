@@ -1,0 +1,15 @@
+name = "star-judge-api"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "star-judge-db"
+database_id = "placeholder-replace-after-wrangler-d1-create"
+
+[vars]
+ENVIRONMENT = "development"
+
+# BGG_API_KEY stored as a secret: wrangler secret put BGG_API_KEY
+# CLOUDFLARE_ACCESS_AUD stored as a secret: wrangler secret put CLOUDFLARE_ACCESS_AUD
