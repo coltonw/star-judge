@@ -53,7 +53,13 @@ export function rankStar(candidates: Candidate[], votes: Vote[]): RankedCandidat
   scored.sort((a, b) => b.score - a.score)
 
   if (scored.length < 2) {
-    return scored.map((c, i) => ({ ...c, rank: i + 1, totalVotes: votes.length }))
+    return scored.map((c, i) => ({
+      ...c,
+      rank: i + 1,
+      totalVotes: votes.length,
+      starScore: c.score,
+      inRunoff: true,
+    }))
   }
 
   // Runoff phase: top 2 go head-to-head
@@ -61,7 +67,12 @@ export function rankStar(candidates: Candidate[], votes: Vote[]): RankedCandidat
   const winner = runoff(votes, first, second)
   const loser = winner.id === first.id ? second : first
 
-  // Final ranking: winner, loser, then the rest by score
   const finalOrder = [winner, loser, ...rest]
-  return finalOrder.map((c, i) => ({ ...c, rank: i + 1, totalVotes: votes.length }))
+  return finalOrder.map((c, i) => ({
+    ...c,
+    rank: i + 1,
+    totalVotes: votes.length,
+    starScore: c.score,
+    inRunoff: c.id === first.id || c.id === second.id,
+  }))
 }

@@ -39,6 +39,8 @@ export interface RankedCandidate extends Candidate {
   rank: number
   gradeCounts: Record<Grade, number>
   totalVotes: number
+  starScore?: number
+  inRunoff?: boolean
 }
 
 export interface TallyResponse {

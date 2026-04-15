@@ -11,8 +11,7 @@
   onMount(async () => {
     try {
       ballot = await getActiveBallot()
-      const sessionId = getSessionId()
-      const result = await checkVoted(ballot.id, sessionId)
+      const result = await checkVoted(ballot.id, getSessionId())
       hasVoted = result.hasVoted
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) {
@@ -44,14 +43,19 @@
 {:else if ballot}
   <div class="card ballot-card">
     <h2>{ballot.name}</h2>
-    <p class="meta">{ballot.candidates.length} games · two voting methods compared</p>
+    <p class="meta">{ballot.candidates.length} games · MJ + STAR voting</p>
 
     {#if hasVoted}
-      <p class="voted-msg">You've already voted on this ballot.</p>
-      <a href="/tally/{ballot.id}" class="btn btn-primary">See Current Results →</a>
+      <div class="action-row">
+        <a href="/tally/{ballot.id}" class="btn btn-primary">See Results →</a>
+        <a href="/vote/{ballot.id}" class="btn btn-ghost">Change Your Vote</a>
+      </div>
+      <p class="voted-hint">Your vote is counted. You can update it any time before the ballot closes.</p>
     {:else}
-      <a href="/vote/{ballot.id}" class="btn btn-primary">Cast Your Vote →</a>
-      <a href="/tally/{ballot.id}" class="btn btn-ghost">Peek at Results</a>
+      <div class="action-row">
+        <a href="/vote/{ballot.id}" class="btn btn-primary">Cast Your Vote →</a>
+        <a href="/tally/{ballot.id}" class="btn btn-ghost">Peek at Results</a>
+      </div>
     {/if}
   </div>
 {/if}
@@ -90,7 +94,7 @@
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: .9rem;
   }
 
   .meta {
@@ -98,12 +102,16 @@
     font-size: .9rem;
   }
 
-  .voted-msg {
-    color: var(--grade-excellent);
-    font-size: .9rem;
+  .action-row {
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+    flex-wrap: wrap;
   }
 
-  .btn + .btn {
-    align-self: flex-start;
+  .voted-hint {
+    color: var(--text-muted);
+    font-size: .82rem;
+    line-height: 1.4;
   }
 </style>

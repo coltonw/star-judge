@@ -1,13 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { page } from '$app/state'
-  import { getTally, ApiError } from '$lib/api'
+  import { getTally, checkVoted, getSessionId, ApiError } from '$lib/api'
   import TallyChart from '$lib/components/TallyChart.svelte'
   import type { TallyResponse } from '$lib/types'
 
   const ballotId = $derived(parseInt(page.params.id, 10))
 
   let tally = $state<TallyResponse | null>(null)
+  let hasVoted = $state(false)
   let loading = $state(true)
   let error = $state('')
   let lastUpdated = $state<Date | null>(null)
@@ -27,6 +28,8 @@
 
   onMount(() => {
     fetchTally()
+    // Check session vote status in parallel with tally fetch
+    checkVoted(ballotId, getSessionId()).then((r) => { hasVoted = r.hasVoted })
     const interval = setInterval(fetchTally, 5000)
     return () => clearInterval(interval)
   })
@@ -47,12 +50,25 @@
 {:else if tally}
   <div class="page-header">
     <h1>{tally.ballotName}</h1>
-    <p>{tally.voteCount} vote{tally.voteCount === 1 ? '' : 's'} cast
-      {#if lastUpdated}· updated {lastUpdated.toLocaleTimeString()}{/if}
-    </p>
+    <div class="header-meta">
+      <span>{tally.voteCount} vote{tally.voteCount === 1 ? '' : 's'} cast</span>
+      {#if lastUpdated}
+        <span class="dot">·</span>
+        <span class="updated">live · {lastUpdated.toLocaleTimeString()}</span>
+      {/if}
+      {#if hasVoted}
+        <span class="dot">·</span>
+        <span class="your-vote">your vote is counted ✓</span>
+      {/if}
+    </div>
   </div>
 
-  {#if tally.voteCount > 0}
+  {#if tally.voteCount === 0}
+    <div class="card no-votes">
+      <p>No votes yet — the ballot is open.</p>
+      <a href="/vote/{tally.ballotId}" class="btn btn-primary">Cast the First Vote →</a>
+    </div>
+  {:else}
     <div class="winners card">
       {#if agree}
         <div class="winner-agree">
@@ -73,33 +89,71 @@
         </div>
       {/if}
     </div>
+
+    <div class="methods">
+      <section class="method-section card">
+        <div class="method-header">
+          <h2>Majority Judgment</h2>
+          <p class="method-desc">
+            Each game's median grade wins. When two games share a median, the one whose
+            median is hardest to "move" wins — this makes it resilient to strategic voting.
+          </p>
+        </div>
+        <TallyChart candidates={tally.mj} mode="mj" />
+      </section>
+
+      <section class="method-section card">
+        <div class="method-header">
+          <h2>STAR Voting</h2>
+          <p class="method-desc">
+            Average score (0–5) determines the top 2 finalists. Those two then go
+            head-to-head: whoever more voters rated higher wins the runoff.
+          </p>
+        </div>
+        <TallyChart candidates={tally.star} mode="star" />
+      </section>
+    </div>
   {/if}
 
-  <div class="methods">
-    <section class="method-section card">
-      <div class="method-header">
-        <h2>Majority Judgment</h2>
-        <span class="method-desc">Ranked by median grade, with distance tiebreaking</span>
-      </div>
-      <TallyChart candidates={tally.mj} />
-    </section>
-
-    <section class="method-section card">
-      <div class="method-header">
-        <h2>STAR Voting</h2>
-        <span class="method-desc">Score totals → top 2 in head-to-head runoff</span>
-      </div>
-      <TallyChart candidates={tally.star} />
-    </section>
-  </div>
-
   <div class="actions">
-    <a href="/vote/{tally.ballotId}" class="btn btn-ghost">← Cast or change vote</a>
+    <a href="/vote/{tally.ballotId}" class="btn btn-primary">
+      {hasVoted ? 'Change Your Vote' : 'Cast Your Vote'} →
+    </a>
   </div>
 {/if}
 
 <style>
   .loading { color: var(--text-muted); padding: 2rem 0; text-align: center; }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    flex-wrap: wrap;
+    color: var(--text-muted);
+    font-size: .9rem;
+    margin-top: .25rem;
+  }
+
+  .dot { color: var(--border); }
+
+  .updated { color: var(--text-muted); }
+
+  .your-vote {
+    color: var(--grade-excellent);
+    font-size: .85rem;
+  }
+
+  .no-votes {
+    text-align: center;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+  }
 
   .winners {
     margin-bottom: 1.5rem;
@@ -138,10 +192,7 @@
     color: var(--grade-excellent);
   }
 
-  .vs {
-    color: var(--text-muted);
-    font-size: .9rem;
-  }
+  .vs { color: var(--text-muted); font-size: .9rem; }
 
   .methods {
     display: flex;
@@ -152,17 +203,14 @@
 
   .method-section { padding: 1.5rem; }
 
-  .method-header {
-    margin-bottom: 1.25rem;
-  }
+  .method-header { margin-bottom: 1.25rem; }
 
   .method-desc {
     font-size: .82rem;
     color: var(--text-muted);
+    margin-top: .3rem;
+    line-height: 1.5;
   }
 
-  .actions {
-    display: flex;
-    gap: 1rem;
-  }
+  .actions { display: flex; gap: 1rem; margin-bottom: 2rem; }
 </style>

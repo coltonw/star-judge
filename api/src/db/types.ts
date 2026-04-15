@@ -47,6 +47,9 @@ export interface RankedCandidate extends Candidate {
   rank: number
   gradeCounts: Record<Grade, number>
   totalVotes: number
+  // STAR-specific fields (only present on star results)
+  starScore?: number   // raw sum of grade values across all voters
+  inRunoff?: boolean   // whether this candidate reached the runoff phase
 }
 
 export interface TallyResponse {

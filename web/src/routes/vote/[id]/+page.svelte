@@ -151,7 +151,9 @@
       >
         {submitting ? 'Submitting…' : isUpdate ? 'Update Vote' : 'Submit Vote'}
       </button>
-      <a href="/tally/{ballot.id}" class="btn btn-ghost">See results without voting</a>
+      <a href="/tally/{ballot.id}" class="btn btn-ghost">
+        {isUpdate ? 'Cancel' : 'Skip & see results'}
+      </a>
     </div>
   </form>
 {/if}
