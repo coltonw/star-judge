@@ -1,10 +1,8 @@
 <script lang="ts">
   import '../app.css'
-  import { page } from '$app/state'
+  import type { LayoutData } from './$types'
 
-  let { children } = $props()
-
-  let isAdmin = $derived(page.url.pathname.startsWith('/admin'))
+  let { data, children }: { data: LayoutData; children: import('svelte').Snippet } = $props()
 </script>
 
 <svelte:head>
@@ -13,8 +11,8 @@
 
 <nav>
   <a class="logo" href="/">⚖️ Star Judge</a>
-  <a href="/">Vote</a>
-  {#if isAdmin}
+  <a href="/">Home</a>
+  {#if data.isAdmin}
     <a href="/admin">Admin</a>
   {/if}
 </nav>
