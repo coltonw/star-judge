@@ -5,14 +5,16 @@
 }
 
 :root {
-  --bg:        #0f1117;
-  --bg-card:   #1a1d27;
-  --bg-hover:  #22263a;
-  --border:    #2e3147;
-  --text:      #e8eaf0;
-  --text-muted:#8891aa;
+  --bg:        #0d1117;
+  --bg-card:   #131929;
+  --bg-hover:  #1a2236;
+  --border:    #263050;
+  --text:      #dde4f5;
+  --text-muted:#6b7a9e;
   --accent:    #6c8eff;
   --accent-dim:#3d52a0;
+  --teal:      #2dd4bf;
+  --teal-dim:  #0d9488;
   --danger:    #dd776e;
 
   --grade-excellent: #52ba8c;
@@ -131,10 +133,19 @@ nav {
 }
 
 nav .logo {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
   font-weight: 700;
   font-size: 1.1rem;
   color: var(--text);
   margin-right: auto;
+}
+
+nav .logo-img {
+  width: 28px;
+  height: auto;
+  flex-shrink: 0;
 }
 
 .badge {

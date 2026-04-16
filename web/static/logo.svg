@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 115" fill="none">
+  <!--
+    Star Judge logo: an imbalanced balance scale.
+    The star (teal) sits in the lower-left pan, making it heavier.
+    Structure color: #4a5a82 (blue-slate, echoes the accent palette)
+    Star color:      #2dd4bf (teal accent)
+  -->
+
+  <!-- Base -->
+  <line x1="56" y1="108" x2="84" y2="108" stroke="#4a5a82" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Center post -->
+  <line x1="70" y1="27" x2="70" y2="108" stroke="#4a5a82" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Fulcrum diamond -->
+  <polygon points="70,17 76,23 70,29 64,23" fill="#4a5a82"/>
+
+  <!-- Beam — tilted ~15°, left end lower, right end higher -->
+  <line x1="20" y1="36" x2="120" y2="9" stroke="#4a5a82" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Left chain (beam end → top of left pan) -->
+  <line x1="20" y1="36" x2="20" y2="64" stroke="#4a5a82" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Right chain (beam end → top of right pan) -->
+  <line x1="120" y1="9" x2="120" y2="37" stroke="#4a5a82" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Left pan (lower — heavier) -->
+  <circle cx="20" cy="79" r="15" stroke="#4a5a82" stroke-width="1.5"/>
+
+  <!-- Right pan (higher — lighter) -->
+  <circle cx="120" cy="52" r="15" stroke="#4a5a82" stroke-width="1.5"/>
+
+  <!--
+    Star in lower-left pan.
+    Center: (20, 72)  outer R=10  inner r=4
+    Points computed at angles: -90° + k*36° alternating outer/inner
+  -->
+  <polygon
+    points="
+      20,62
+      22.35,68.76
+      29.51,68.91
+      23.80,73.24
+      25.88,80.09
+      20,76
+      14.12,80.09
+      16.20,73.24
+      10.49,68.91
+      17.65,68.76
+    "
+    fill="#2dd4bf"
+  />
+</svg>

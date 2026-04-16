@@ -140,7 +140,7 @@
   .updated { color: var(--text-muted); }
 
   .your-vote {
-    color: var(--grade-excellent);
+    color: var(--teal);
     font-size: .85rem;
   }
 

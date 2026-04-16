@@ -10,7 +10,10 @@
 </svelte:head>
 
 <nav>
-  <a class="logo" href="/">⚖️ Star Judge</a>
+  <a class="logo" href="/">
+    <img src="/logo.svg" alt="" class="logo-img" />
+    Star Judge
+  </a>
   <a href="/">Home</a>
   {#if data.isAdmin}
     <a href="/admin">Admin</a>

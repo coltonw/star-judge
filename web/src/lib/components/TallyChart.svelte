@@ -133,7 +133,7 @@
   }
 
   .star-score {
-    color: var(--accent);
+    color: var(--teal);
   }
 
   .out-of {
@@ -147,15 +147,15 @@
     font-weight: 600;
     padding: .1rem .4rem;
     border-radius: 3px;
-    background: color-mix(in srgb, var(--accent-dim) 40%, var(--bg-card));
+    background: color-mix(in srgb, var(--teal-dim) 30%, var(--bg-card));
     color: var(--text-muted);
     white-space: nowrap;
     flex-shrink: 0;
   }
 
   .runoff-badge.winner {
-    background: color-mix(in srgb, var(--grade-excellent) 15%, var(--bg-card));
-    color: var(--grade-excellent);
+    background: color-mix(in srgb, var(--teal) 15%, var(--bg-card));
+    color: var(--teal);
   }
 
   .bar-wrap {
