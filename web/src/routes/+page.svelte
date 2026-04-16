@@ -30,7 +30,10 @@
 </svelte:head>
 
 <div class="hero">
-  <h1 class="title">⚖️ Star Judge</h1>
+  <h1 class="title">
+    <img src="/logo.svg" alt="" class="hero-logo" />
+    Star Judge
+  </h1>
   <p class="subtitle">Decide what to play tonight — with math.</p>
 </div>
 
@@ -67,8 +70,17 @@
   }
 
   .title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .6rem;
     font-size: 3rem;
     margin-bottom: .5rem;
+  }
+
+  .hero-logo {
+    width: 56px;
+    height: auto;
   }
 
   .subtitle {
