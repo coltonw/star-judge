@@ -12,12 +12,12 @@ export const GRADE_VALUES: Record<Grade, number> = {
 }
 
 export const GRADE_LABELS: Record<Grade, string> = {
-  excellent: 'Excellent',
-  verygood: 'Very Good',
-  good: 'Good',
-  average: 'Average',
-  fair: 'Fair',
-  poor: 'Poor',
+  excellent: 'Hyped',
+  verygood: 'Into it',
+  good: 'Sure',
+  average: 'Eh',
+  fair: 'Meh',
+  poor: 'Hard pass',
 }
 
 export interface Candidate {
