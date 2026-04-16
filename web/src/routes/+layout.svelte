@@ -11,7 +11,7 @@
 
 <nav>
   <a class="logo" href="/">
-    <img src="/logo.svg" alt="" class="logo-img" />
+    <img src="/logo.png" alt="" class="logo-img" />
     Star Judge
   </a>
   <a href="/">Home</a>
