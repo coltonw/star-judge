@@ -1,7 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { getActiveBallot, getSessionId, checkVoted, ApiError } from '$lib/api'
+  import { MOCK_SCENARIOS } from '$lib/mock-scenarios'
   import type { Ballot } from '$lib/types'
+
+  const isDev = import.meta.env.DEV
 
   let ballot = $state<Ballot | null>(null)
   let hasVoted = $state(false)
@@ -36,6 +39,20 @@
   </h1>
   <p class="subtitle">Decide what to play tonight — with math.</p>
 </div>
+
+{#if isDev}
+  <div class="dev-panel">
+    <h3 class="dev-heading">Dev Scenarios</h3>
+    <div class="scenario-grid">
+      {#each MOCK_SCENARIOS as scenario}
+        <a href="/tally/{scenario.id}" class="scenario-card">
+          <span class="scenario-label">{scenario.label}</span>
+          <span class="scenario-desc">{scenario.description}</span>
+        </a>
+      {/each}
+    </div>
+  </div>
+{/if}
 
 {#if loading}
   <p class="loading">Loading…</p>
@@ -124,6 +141,59 @@
   .voted-hint {
     color: var(--text-muted);
     font-size: .82rem;
+    line-height: 1.4;
+  }
+
+  .dev-panel {
+    max-width: 640px;
+    margin: 0 auto 2.5rem;
+    padding: 1.25rem;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+  }
+
+  .dev-heading {
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+
+  .scenario-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: .6rem;
+  }
+
+  .scenario-card {
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+    padding: .7rem .9rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    text-decoration: none;
+    transition: border-color .15s, background .15s;
+  }
+
+  .scenario-card:hover {
+    border-color: var(--accent);
+    background: var(--bg-hover);
+    text-decoration: none;
+  }
+
+  .scenario-label {
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .scenario-desc {
+    font-size: .72rem;
+    color: var(--text-muted);
     line-height: 1.4;
   }
 </style>

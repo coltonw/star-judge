@@ -2,10 +2,12 @@
   import { onMount } from 'svelte'
   import { page } from '$app/state'
   import { getTally, checkVoted, getSessionId, ApiError } from '$lib/api'
+  import { getMockScenario } from '$lib/mock-scenarios'
   import TallyChart from '$lib/components/TallyChart.svelte'
   import type { TallyResponse } from '$lib/types'
 
-  const ballotId = $derived(parseInt(page.params.id, 10))
+  const isMock = $derived(isNaN(parseInt(page.params.id, 10)))
+  const ballotId = $derived(isMock ? 0 : parseInt(page.params.id, 10))
 
   let tally = $state<TallyResponse | null>(null)
   let hasVoted = $state(false)
@@ -27,16 +29,31 @@
   }
 
   onMount(() => {
+    if (isMock) {
+      const scenario = getMockScenario(page.params.id)
+      if (scenario) {
+        tally = scenario.tally
+      } else {
+        error = `Unknown scenario: ${page.params.id}`
+      }
+      loading = false
+      return
+    }
+
     fetchTally()
-    // Check session vote status in parallel with tally fetch
     checkVoted(ballotId, getSessionId()).then((r) => { hasVoted = r.hasVoted })
     const interval = setInterval(fetchTally, 5000)
     return () => clearInterval(interval)
   })
 
-  let mjWinner = $derived(tally?.mj[0]?.name ?? null)
+  let mjWinner  = $derived(tally?.mj[0]?.name ?? null)
   let starWinner = $derived(tally?.star[0]?.name ?? null)
-  let agree = $derived(mjWinner !== null && mjWinner === starWinner)
+  let mjTied    = $derived((tally?.mj.length ?? 0) > 1 && tally!.mj[0]?.rank === tally!.mj[1]?.rank)
+  let starTied  = $derived((tally?.star.length ?? 0) > 1 && tally!.star[0]?.rank === tally!.star[1]?.rank)
+  let agree     = $derived(!mjTied && !starTied && mjWinner !== null && mjWinner === starWinner)
+  let bothTied  = $derived(mjTied && starTied)
+  let mjTiedNames  = $derived(mjTied  ? tally!.mj.filter(c => c.rank === 1).map(c => c.name)  : [])
+  let starTiedNames = $derived(starTied ? tally!.star.filter(c => c.rank === 1).map(c => c.name) : [])
 </script>
 
 <svelte:head>
@@ -52,9 +69,13 @@
     <h1>{tally.ballotName}</h1>
     <div class="header-meta">
       <span>{tally.voteCount} vote{tally.voteCount === 1 ? '' : 's'} cast</span>
-      {#if lastUpdated}
+      {#if !isMock && lastUpdated}
         <span class="dot">·</span>
         <span class="updated">live · {lastUpdated.toLocaleTimeString()}</span>
+      {/if}
+      {#if isMock}
+        <span class="dot">·</span>
+        <span class="mock-badge">mock data</span>
       {/if}
       {#if hasVoted}
         <span class="dot">·</span>
@@ -66,11 +87,42 @@
   {#if tally.voteCount === 0}
     <div class="card no-votes">
       <p>No votes yet — the ballot is open.</p>
-      <a href="/vote/{tally.ballotId}" class="btn btn-primary">Cast the First Vote →</a>
+      {#if !isMock}
+        <a href="/vote/{tally.ballotId}" class="btn btn-primary">Cast the First Vote →</a>
+      {/if}
     </div>
   {:else}
     <div class="winners card">
-      {#if agree}
+      {#if bothTied}
+        <div class="winner-tie">
+          <span class="crown">🤝</span>
+          <span>Both methods deadlock — <strong>{mjTiedNames.join(' and ')}</strong> are tied at #1.</span>
+        </div>
+      {:else if mjTied}
+        <div class="winner-split">
+          <div>
+            <span class="method-tag">MJ says</span>
+            <span class="winner-name">{mjTiedNames.join(' & ')} <span class="tie-label">(tie)</span></span>
+          </div>
+          <div class="vs">⚡ vs ⚡</div>
+          <div>
+            <span class="method-tag">STAR says</span>
+            <span class="winner-name">{starWinner}</span>
+          </div>
+        </div>
+      {:else if starTied}
+        <div class="winner-split">
+          <div>
+            <span class="method-tag">MJ says</span>
+            <span class="winner-name">{mjWinner}</span>
+          </div>
+          <div class="vs">⚡ vs ⚡</div>
+          <div>
+            <span class="method-tag">STAR says</span>
+            <span class="winner-name">{starTiedNames.join(' & ')} <span class="tie-label">(tie)</span></span>
+          </div>
+        </div>
+      {:else if agree}
         <div class="winner-agree">
           <span class="crown">👑</span>
           <span>Both methods agree: <strong>{mjWinner}</strong> wins!</span>
@@ -116,9 +168,13 @@
   {/if}
 
   <div class="actions">
-    <a href="/vote/{tally.ballotId}" class="btn btn-primary">
-      {hasVoted ? 'Change Your Vote' : 'Cast Your Vote'} →
-    </a>
+    {#if isMock}
+      <a href="/" class="btn btn-ghost">← Back to Home</a>
+    {:else}
+      <a href="/vote/{tally.ballotId}" class="btn btn-primary">
+        {hasVoted ? 'Change Your Vote' : 'Cast Your Vote'} →
+      </a>
+    {/if}
   </div>
 {/if}
 
@@ -136,8 +192,16 @@
   }
 
   .dot { color: var(--border); }
-
   .updated { color: var(--text-muted); }
+
+  .mock-badge {
+    font-size: .75rem;
+    font-weight: 600;
+    padding: .1rem .45rem;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--accent-dim) 40%, var(--bg-card));
+    color: var(--accent);
+  }
 
   .your-vote {
     color: var(--teal);
@@ -161,7 +225,7 @@
     padding: 1.25rem;
   }
 
-  .winner-agree {
+  .winner-agree, .winner-tie {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -192,6 +256,12 @@
     color: var(--grade-excellent);
   }
 
+  .tie-label {
+    font-size: .8rem;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+
   .vs { color: var(--text-muted); font-size: .9rem; }
 
   .methods {
@@ -202,7 +272,6 @@
   }
 
   .method-section { padding: 1.5rem; }
-
   .method-header { margin-bottom: 1.25rem; }
 
   .method-desc {
