@@ -1,43 +1,43 @@
 <script lang="ts">
-  import { GRADES, GRADE_LABELS, GRADE_COLORS, type RankedCandidate, type Grade } from '$lib/types'
+import { GRADE_COLORS, GRADE_LABELS, GRADES, type Grade, type RankedCandidate } from '$lib/types';
 
-  let {
-    candidates,
-    mode = 'mj',
-    showVetoed = true,
-    condorcetParadox = false,
-    dictatorName = null,
-  }: {
-    candidates: RankedCandidate[]
-    mode?: 'mj' | 'star' | 'borda' | 'irv' | 'condorcet' | 'dictator'
-    showVetoed?: boolean
-    condorcetParadox?: boolean
-    dictatorName?: string | null
-  } = $props()
+let {
+  candidates,
+  mode = 'mj',
+  showVetoed = true,
+  condorcetParadox = false,
+  dictatorName = null,
+}: {
+  candidates: RankedCandidate[];
+  mode?: 'mj' | 'star' | 'borda' | 'irv' | 'condorcet' | 'dictator';
+  showVetoed?: boolean;
+  condorcetParadox?: boolean;
+  dictatorName?: string | null;
+} = $props();
 
-  let visibleCandidates = $derived(showVetoed ? candidates : candidates.filter(c => !c.vetoed))
-  let totalCandidates = $derived(candidates.length)
+let visibleCandidates = $derived(showVetoed ? candidates : candidates.filter((c) => !c.vetoed));
+let totalCandidates = $derived(candidates.length);
 
-  function pct(candidate: RankedCandidate, grade: Grade): number {
-    if (candidate.totalVotes === 0) return 0
-    return (candidate.gradeCounts[grade] / candidate.totalVotes) * 100
+function pct(candidate: RankedCandidate, grade: Grade): number {
+  if (candidate.totalVotes === 0) return 0;
+  return (candidate.gradeCounts[grade] / candidate.totalVotes) * 100;
+}
+
+function medianGrade(candidate: RankedCandidate): Grade {
+  const total = candidate.totalVotes;
+  if (total === 0) return 'poor';
+  let cumulative = 0;
+  for (const grade of GRADES) {
+    cumulative += candidate.gradeCounts[grade];
+    if (cumulative >= total / 2) return grade;
   }
+  return 'poor';
+}
 
-  function medianGrade(candidate: RankedCandidate): Grade {
-    const total = candidate.totalVotes
-    if (total === 0) return 'poor'
-    let cumulative = 0
-    for (const grade of GRADES) {
-      cumulative += candidate.gradeCounts[grade]
-      if (cumulative >= total / 2) return grade
-    }
-    return 'poor'
-  }
-
-  function avgScore(candidate: RankedCandidate): string {
-    if (!candidate.starScore || candidate.totalVotes === 0) return '0.0'
-    return (candidate.starScore / candidate.totalVotes).toFixed(1)
-  }
+function avgScore(candidate: RankedCandidate): string {
+  if (!candidate.starScore || candidate.totalVotes === 0) return '0.0';
+  return (candidate.starScore / candidate.totalVotes).toFixed(1);
+}
 </script>
 
 {#if visibleCandidates.length === 0}

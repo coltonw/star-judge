@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS ballots (
   name            TEXT NOT NULL,
   candidates      TEXT NOT NULL DEFAULT '[]',
   active          INTEGER NOT NULL DEFAULT 1,
-  official_method TEXT NOT NULL DEFAULT 'mj',
+  official_method TEXT NOT NULL DEFAULT 'ivstar',
   created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

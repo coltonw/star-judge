@@ -1,53 +1,51 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
-  import { getBggCollection, ApiError } from '$lib/api'
-  import type { Candidate } from '$lib/types'
+import { onMount } from 'svelte';
+import { ApiError, getBggCollection } from '$lib/api';
+import type { Candidate } from '$lib/types';
 
-  let {
-    selected = $bindable<Candidate[]>([]),
-    username = 'dagreenmachine',
-  }: { selected: Candidate[]; username?: string } = $props()
+let {
+  selected = $bindable<Candidate[]>([]),
+  username = 'dagreenmachine',
+}: { selected: Candidate[]; username?: string } = $props();
 
-  let allGames = $state<Candidate[]>([])
-  let search = $state('')
-  let loading = $state(false)
-  let retrying = $state(false)
-  let error = $state('')
+let allGames = $state<Candidate[]>([]);
+let search = $state('');
+let loading = $state(false);
+let retrying = $state(false);
+let error = $state('');
 
-  let filtered = $derived(
-    allGames.filter((g) => g.name.toLowerCase().includes(search.toLowerCase()))
-  )
+let filtered = $derived(allGames.filter((g) => g.name.toLowerCase().includes(search.toLowerCase())));
 
-  let selectedIds = $derived(new Set(selected.map((c) => c.id)))
+let selectedIds = $derived(new Set(selected.map((c) => c.id)));
 
-  async function fetchCollection() {
-    loading = true
-    error = ''
-    try {
-      const result = await getBggCollection(username)
-      if ('retry' in result) {
-        retrying = true
-        setTimeout(fetchCollection, 3000)
-        return
-      }
-      retrying = false
-      allGames = result.candidates
-    } catch (e) {
-      error = e instanceof ApiError ? e.message : 'Failed to load BGG collection.'
-    } finally {
-      loading = false
+async function fetchCollection() {
+  loading = true;
+  error = '';
+  try {
+    const result = await getBggCollection(username);
+    if ('retry' in result) {
+      retrying = true;
+      setTimeout(fetchCollection, 3000);
+      return;
     }
+    retrying = false;
+    allGames = result.candidates;
+  } catch (e) {
+    error = e instanceof ApiError ? e.message : 'Failed to load BGG collection.';
+  } finally {
+    loading = false;
   }
+}
 
-  onMount(fetchCollection)
+onMount(fetchCollection);
 
-  function toggle(game: Candidate) {
-    if (selectedIds.has(game.id)) {
-      selected = selected.filter((c) => c.id !== game.id)
-    } else {
-      selected = [...selected, game]
-    }
+function toggle(game: Candidate) {
+  if (selectedIds.has(game.id)) {
+    selected = selected.filter((c) => c.id !== game.id);
+  } else {
+    selected = [...selected, game];
   }
+}
 </script>
 
 <div class="picker">

@@ -52,7 +52,7 @@ h2 { font-size: 1.4rem; }
 h3 { font-size: 1.1rem; }
 
 .container {
-  max-width: 860px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 1.25rem;
 }
@@ -128,7 +128,7 @@ nav {
   gap: 1.5rem;
   padding: 1rem 1.25rem;
   border-bottom: 1px solid var(--border);
-  max-width: 860px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 

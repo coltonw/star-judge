@@ -1,4 +1,4 @@
-import type { Ballot, Candidate, Vote, Grade, Bindings, VotingMethodKey } from './types'
+import type { Ballot, Bindings, Candidate, Grade, Vote, VotingMethodKey } from './types';
 
 function parseBallot(row: Record<string, unknown>): Ballot {
   return {
@@ -8,7 +8,7 @@ function parseBallot(row: Record<string, unknown>): Ballot {
     active: (row.active as number) === 1,
     officialMethod: (row.official_method as VotingMethodKey | null) ?? 'mj',
     created_at: row.created_at as string,
-  }
+  };
 }
 
 function parseVote(row: Record<string, unknown>): Vote {
@@ -19,39 +19,35 @@ function parseVote(row: Record<string, unknown>): Vote {
     session_id: row.session_id as string,
     ratings: JSON.parse(row.ratings as string) as Record<string, Grade>,
     created_at: row.created_at as string,
-  }
+  };
 }
 
 export async function getBallots(db: Bindings['DB']): Promise<Ballot[]> {
-  const { results } = await db
-    .prepare('SELECT * FROM ballots ORDER BY created_at DESC')
-    .all()
-  return results.map(parseBallot)
+  const { results } = await db.prepare('SELECT * FROM ballots ORDER BY created_at DESC').all();
+  return results.map(parseBallot);
 }
 
 export async function getActiveBallot(db: Bindings['DB']): Promise<Ballot | null> {
-  const row = await db
-    .prepare('SELECT * FROM ballots WHERE active = 1 ORDER BY created_at DESC LIMIT 1')
-    .first()
-  return row ? parseBallot(row) : null
+  const row = await db.prepare('SELECT * FROM ballots WHERE active = 1 ORDER BY created_at DESC LIMIT 1').first();
+  return row ? parseBallot(row) : null;
 }
 
 export async function getBallot(db: Bindings['DB'], id: number): Promise<Ballot | null> {
-  const row = await db.prepare('SELECT * FROM ballots WHERE id = ?').bind(id).first()
-  return row ? parseBallot(row) : null
+  const row = await db.prepare('SELECT * FROM ballots WHERE id = ?').bind(id).first();
+  return row ? parseBallot(row) : null;
 }
 
 export async function createBallot(
   db: Bindings['DB'],
   name: string,
   candidates: Candidate[],
-  officialMethod: VotingMethodKey = 'mj'
+  officialMethod: VotingMethodKey = 'ivstar'
 ): Promise<Ballot> {
   const result = await db
     .prepare('INSERT INTO ballots (name, candidates, official_method) VALUES (?, ?, ?) RETURNING *')
     .bind(name, JSON.stringify(candidates), officialMethod)
-    .first()
-  return parseBallot(result!)
+    .first();
+  return parseBallot(result!);
 }
 
 export async function updateBallot(
@@ -60,39 +56,30 @@ export async function updateBallot(
   name: string,
   candidates: Candidate[],
   active: boolean,
-  officialMethod: VotingMethodKey = 'mj'
+  officialMethod: VotingMethodKey = 'ivstar'
 ): Promise<Ballot | null> {
   const result = await db
-    .prepare(
-      'UPDATE ballots SET name = ?, candidates = ?, active = ?, official_method = ? WHERE id = ? RETURNING *'
-    )
+    .prepare('UPDATE ballots SET name = ?, candidates = ?, active = ?, official_method = ? WHERE id = ? RETURNING *')
     .bind(name, JSON.stringify(candidates), active ? 1 : 0, officialMethod, id)
-    .first()
-  return result ? parseBallot(result) : null
+    .first();
+  return result ? parseBallot(result) : null;
 }
 
 export async function deleteBallot(db: Bindings['DB'], id: number): Promise<void> {
-  await db.prepare('DELETE FROM ballots WHERE id = ?').bind(id).run()
+  await db.prepare('DELETE FROM ballots WHERE id = ?').bind(id).run();
 }
 
 export async function getVotesForBallot(db: Bindings['DB'], ballotId: number): Promise<Vote[]> {
-  const { results } = await db
-    .prepare('SELECT * FROM votes WHERE ballot_id = ?')
-    .bind(ballotId)
-    .all()
-  return results.map(parseVote)
+  const { results } = await db.prepare('SELECT * FROM votes WHERE ballot_id = ?').bind(ballotId).all();
+  return results.map(parseVote);
 }
 
-export async function getVoteBySession(
-  db: Bindings['DB'],
-  ballotId: number,
-  sessionId: string
-): Promise<Vote | null> {
+export async function getVoteBySession(db: Bindings['DB'], ballotId: number, sessionId: string): Promise<Vote | null> {
   const row = await db
     .prepare('SELECT * FROM votes WHERE ballot_id = ? AND session_id = ?')
     .bind(ballotId, sessionId)
-    .first()
-  return row ? parseVote(row) : null
+    .first();
+  return row ? parseVote(row) : null;
 }
 
 export async function upsertVote(
@@ -111,6 +98,6 @@ export async function upsertVote(
        RETURNING *`
     )
     .bind(ballotId, voterName, sessionId, JSON.stringify(ratings))
-    .first()
-  return parseVote(result!)
+    .first();
+  return parseVote(result!);
 }

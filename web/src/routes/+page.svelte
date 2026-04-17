@@ -1,31 +1,31 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
-  import { getActiveBallot, getSessionId, checkVoted, ApiError } from '$lib/api'
-  import { MOCK_SCENARIOS } from '$lib/mock-scenarios'
-  import type { Ballot } from '$lib/types'
+import { onMount } from 'svelte';
+import { ApiError, checkVoted, getActiveBallot, getSessionId } from '$lib/api';
+import { MOCK_SCENARIOS } from '$lib/mock-scenarios';
+import type { Ballot } from '$lib/types';
 
-  const isDev = import.meta.env.DEV
+const isDev = import.meta.env.DEV;
 
-  let ballot = $state<Ballot | null>(null)
-  let hasVoted = $state(false)
-  let loading = $state(true)
-  let error = $state('')
+let ballot = $state<Ballot | null>(null);
+let hasVoted = $state(false);
+let loading = $state(true);
+let error = $state('');
 
-  onMount(async () => {
-    try {
-      ballot = await getActiveBallot()
-      const result = await checkVoted(ballot.id, getSessionId())
-      hasVoted = result.hasVoted
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 404) {
-        error = 'No active ballot right now. Check back on game night!'
-      } else {
-        error = 'Failed to load ballot.'
-      }
-    } finally {
-      loading = false
+onMount(async () => {
+  try {
+    ballot = await getActiveBallot();
+    const result = await checkVoted(ballot.id, getSessionId());
+    hasVoted = result.hasVoted;
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) {
+      error = 'No active ballot right now. Check back on game night!';
+    } else {
+      error = 'Failed to load ballot.';
     }
-  })
+  } finally {
+    loading = false;
+  }
+});
 </script>
 
 <svelte:head>
@@ -63,14 +63,17 @@
 {:else if ballot}
   <div class="card ballot-card">
     <h2>{ballot.name}</h2>
-    <p class="meta">{ballot.candidates.length} games · MJ + STAR voting</p>
+    <p class="meta">{ballot.candidates.length} games · STAR + MJ voting</p>
 
     {#if hasVoted}
       <div class="action-row">
         <a href="/tally/{ballot.id}" class="btn btn-primary">See Results →</a>
         <a href="/vote/{ballot.id}" class="btn btn-ghost">Change Your Vote</a>
       </div>
-      <p class="voted-hint">Your vote is counted. You can update it any time before the ballot closes.</p>
+      <p class="voted-hint">
+        Your vote is counted. You can update it any time before the ballot
+        closes.
+      </p>
     {:else}
       <div class="action-row">
         <a href="/vote/{ballot.id}" class="btn btn-primary">Cast Your Vote →</a>
@@ -90,9 +93,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: .6rem;
+    gap: 0.6rem;
     font-size: 3rem;
-    margin-bottom: .5rem;
+    margin-bottom: 0.5rem;
   }
 
   .hero-logo {
@@ -123,24 +126,24 @@
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: .9rem;
+    gap: 0.9rem;
   }
 
   .meta {
     color: var(--text-muted);
-    font-size: .9rem;
+    font-size: 0.9rem;
   }
 
   .action-row {
     display: flex;
-    gap: .75rem;
+    gap: 0.75rem;
     align-items: center;
     flex-wrap: wrap;
   }
 
   .voted-hint {
     color: var(--text-muted);
-    font-size: .82rem;
+    font-size: 0.82rem;
     line-height: 1.4;
   }
 
@@ -153,9 +156,9 @@
   }
 
   .dev-heading {
-    font-size: .75rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    letter-spacing: .08em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--accent);
     margin-bottom: 1rem;
@@ -164,19 +167,21 @@
   .scenario-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: .6rem;
+    gap: 0.6rem;
   }
 
   .scenario-card {
     display: flex;
     flex-direction: column;
-    gap: .25rem;
-    padding: .7rem .9rem;
+    gap: 0.25rem;
+    padding: 0.7rem 0.9rem;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 7px;
     text-decoration: none;
-    transition: border-color .15s, background .15s;
+    transition:
+      border-color 0.15s,
+      background 0.15s;
   }
 
   .scenario-card:hover {
@@ -186,13 +191,13 @@
   }
 
   .scenario-label {
-    font-size: .85rem;
+    font-size: 0.85rem;
     font-weight: 600;
     color: var(--text);
   }
 
   .scenario-desc {
-    font-size: .72rem;
+    font-size: 0.72rem;
     color: var(--text-muted);
     line-height: 1.4;
   }

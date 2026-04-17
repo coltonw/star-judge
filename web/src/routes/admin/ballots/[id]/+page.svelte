@@ -1,49 +1,49 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
-  import { page } from '$app/state'
-  import { goto } from '$app/navigation'
-  import { getBallot, updateBallot, ApiError } from '$lib/api'
-  import GamePicker from '$lib/components/GamePicker.svelte'
-  import type { Ballot, Candidate, VotingMethodKey } from '$lib/types'
-  import { VOTING_METHOD_LABELS } from '$lib/types'
+import { onMount } from 'svelte';
+import { goto } from '$app/navigation';
+import { page } from '$app/state';
+import { ApiError, getBallot, updateBallot } from '$lib/api';
+import GamePicker from '$lib/components/GamePicker.svelte';
+import type { Ballot, Candidate, VotingMethodKey } from '$lib/types';
+import { VOTING_METHOD_LABELS } from '$lib/types';
 
-  const ballotId = $derived(parseInt(page.params.id ?? '', 10))
+const ballotId = $derived(parseInt(page.params.id ?? '', 10));
 
-  let ballot = $state<Ballot | null>(null)
-  let name = $state('')
-  let selectedGames = $state<Candidate[]>([])
-  let active = $state(true)
-  let officialMethod = $state<VotingMethodKey>('mj')
-  let loading = $state(true)
-  let submitting = $state(false)
-  let error = $state('')
+let ballot = $state<Ballot | null>(null);
+let name = $state('');
+let selectedGames = $state<Candidate[]>([]);
+let active = $state(true);
+let officialMethod = $state<VotingMethodKey>('ivstar');
+let loading = $state(true);
+let submitting = $state(false);
+let error = $state('');
 
-  onMount(async () => {
-    try {
-      ballot = await getBallot(ballotId)
-      name = ballot.name
-      selectedGames = ballot.candidates
-      active = ballot.active
-      officialMethod = ballot.officialMethod ?? 'mj'
-    } catch (e) {
-      error = e instanceof ApiError ? e.message : 'Failed to load ballot.'
-    } finally {
-      loading = false
-    }
-  })
-
-  async function submit() {
-    if (!name.trim() || selectedGames.length < 2) return
-    submitting = true
-    error = ''
-    try {
-      await updateBallot(ballotId, name.trim(), selectedGames, active, officialMethod)
-      goto('/admin')
-    } catch (e) {
-      error = e instanceof ApiError ? e.message : 'Failed to update ballot.'
-      submitting = false
-    }
+onMount(async () => {
+  try {
+    ballot = await getBallot(ballotId);
+    name = ballot.name;
+    selectedGames = ballot.candidates;
+    active = ballot.active;
+    officialMethod = ballot.officialMethod ?? 'mj';
+  } catch (e) {
+    error = e instanceof ApiError ? e.message : 'Failed to load ballot.';
+  } finally {
+    loading = false;
   }
+});
+
+async function submit() {
+  if (!name.trim() || selectedGames.length < 2) return;
+  submitting = true;
+  error = '';
+  try {
+    await updateBallot(ballotId, name.trim(), selectedGames, active, officialMethod);
+    goto('/admin');
+  } catch (e) {
+    error = e instanceof ApiError ? e.message : 'Failed to update ballot.';
+    submitting = false;
+  }
+}
 </script>
 
 <svelte:head>

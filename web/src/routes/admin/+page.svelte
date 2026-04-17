@@ -1,40 +1,40 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
-  import { getBallots, deleteBallot, updateBallot, ApiError } from '$lib/api'
-  import type { Ballot } from '$lib/types'
+import { onMount } from 'svelte';
+import { ApiError, deleteBallot, getBallots, updateBallot } from '$lib/api';
+import type { Ballot } from '$lib/types';
 
-  let ballots = $state<Ballot[]>([])
-  let loading = $state(true)
-  let error = $state('')
+let ballots = $state<Ballot[]>([]);
+let loading = $state(true);
+let error = $state('');
 
-  onMount(async () => {
-    try {
-      ballots = await getBallots()
-    } catch (e) {
-      error = e instanceof ApiError ? e.message : 'Failed to load ballots.'
-    } finally {
-      loading = false
-    }
-  })
-
-  async function toggleActive(ballot: Ballot) {
-    try {
-      const updated = await updateBallot(ballot.id, ballot.name, ballot.candidates, !ballot.active)
-      ballots = ballots.map((b) => (b.id === updated.id ? updated : b))
-    } catch (e) {
-      error = e instanceof ApiError ? e.message : 'Failed to update ballot.'
-    }
+onMount(async () => {
+  try {
+    ballots = await getBallots();
+  } catch (e) {
+    error = e instanceof ApiError ? e.message : 'Failed to load ballots.';
+  } finally {
+    loading = false;
   }
+});
 
-  async function remove(id: number) {
-    if (!confirm('Delete this ballot and all its votes?')) return
-    try {
-      await deleteBallot(id)
-      ballots = ballots.filter((b) => b.id !== id)
-    } catch (e) {
-      error = e instanceof ApiError ? e.message : 'Failed to delete ballot.'
-    }
+async function toggleActive(ballot: Ballot) {
+  try {
+    const updated = await updateBallot(ballot.id, ballot.name, ballot.candidates, !ballot.active);
+    ballots = ballots.map((b) => (b.id === updated.id ? updated : b));
+  } catch (e) {
+    error = e instanceof ApiError ? e.message : 'Failed to update ballot.';
   }
+}
+
+async function remove(id: number) {
+  if (!confirm('Delete this ballot and all its votes?')) return;
+  try {
+    await deleteBallot(id);
+    ballots = ballots.filter((b) => b.id !== id);
+  } catch (e) {
+    error = e instanceof ApiError ? e.message : 'Failed to delete ballot.';
+  }
+}
 </script>
 
 <svelte:head>

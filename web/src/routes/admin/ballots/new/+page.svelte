@@ -1,26 +1,26 @@
 <script lang="ts">
-  import { goto } from '$app/navigation'
-  import { createBallot, ApiError } from '$lib/api'
-  import GamePicker from '$lib/components/GamePicker.svelte'
-  import type { Candidate } from '$lib/types'
+import { goto } from '$app/navigation';
+import { ApiError, createBallot } from '$lib/api';
+import GamePicker from '$lib/components/GamePicker.svelte';
+import type { Candidate } from '$lib/types';
 
-  let name = $state('')
-  let selectedGames = $state<Candidate[]>([])
-  let submitting = $state(false)
-  let error = $state('')
+let name = $state('');
+let selectedGames = $state<Candidate[]>([]);
+let submitting = $state(false);
+let error = $state('');
 
-  async function submit() {
-    if (!name.trim() || selectedGames.length < 2) return
-    submitting = true
-    error = ''
-    try {
-      const ballot = await createBallot(name.trim(), selectedGames)
-      goto(`/admin`)
-    } catch (e) {
-      error = e instanceof ApiError ? e.message : 'Failed to create ballot.'
-      submitting = false
-    }
+async function submit() {
+  if (!name.trim() || selectedGames.length < 2) return;
+  submitting = true;
+  error = '';
+  try {
+    await createBallot(name.trim(), selectedGames);
+    goto(`/admin`);
+  } catch (e) {
+    error = e instanceof ApiError ? e.message : 'Failed to create ballot.';
+    submitting = false;
   }
+}
 </script>
 
 <svelte:head>
