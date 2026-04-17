@@ -1,4 +1,4 @@
-import type { Ballot, TallyResponse, Candidate, Grade } from './types'
+import type { Ballot, TallyResponse, Candidate, Grade, VotingMethodKey } from './types'
 
 // In production this will be empty (same origin via Cloudflare).
 // Set VITE_API_BASE in .env.local for local dev: http://localhost:8787
@@ -40,10 +40,14 @@ export function getBallots(): Promise<Ballot[]> {
   return request('/api/ballots')
 }
 
-export function createBallot(name: string, candidates: Candidate[]): Promise<Ballot> {
+export function createBallot(
+  name: string,
+  candidates: Candidate[],
+  officialMethod: VotingMethodKey = 'mj'
+): Promise<Ballot> {
   return request('/api/admin/ballots', {
     method: 'POST',
-    body: JSON.stringify({ name, candidates }),
+    body: JSON.stringify({ name, candidates, officialMethod }),
   })
 }
 
@@ -51,11 +55,12 @@ export function updateBallot(
   id: number,
   name: string,
   candidates: Candidate[],
-  active: boolean
+  active: boolean,
+  officialMethod: VotingMethodKey = 'mj'
 ): Promise<Ballot> {
   return request(`/api/admin/ballots/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify({ name, candidates, active }),
+    body: JSON.stringify({ name, candidates, active, officialMethod }),
   })
 }
 

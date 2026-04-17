@@ -26,11 +26,14 @@ export interface Candidate {
   thumbnail: string
 }
 
+export type VotingMethodKey = 'mj' | 'ivmj' | 'star' | 'ivstar' | 'borda' | 'irv' | 'condorcet' | 'dictator'
+
 export interface Ballot {
   id: number
   name: string
   candidates: Candidate[]
   active: boolean
+  officialMethod: VotingMethodKey
   created_at: string
 }
 
@@ -47,17 +50,35 @@ export interface RankedCandidate extends Candidate {
   rank: number
   gradeCounts: Record<Grade, number>
   totalVotes: number
-  // STAR-specific fields (only present on star results)
-  starScore?: number   // raw sum of grade values across all voters
-  inRunoff?: boolean   // whether this candidate reached the runoff phase
+  // STAR-specific
+  starScore?: number
+  inRunoff?: boolean
+  // Implicit Veto
+  vetoed?: boolean
+  hardPassCount?: number
+  // Borda
+  bordaScore?: number
+  // IRV
+  irvElimRound?: number   // which round eliminated (undefined = winner)
+  // Condorcet
+  pairwiseWins?: number   // head-to-head matchups won
 }
 
 export interface TallyResponse {
   ballotId: number
   ballotName: string
+  officialMethod: VotingMethodKey
   voteCount: number
   mj: RankedCandidate[]
   star: RankedCandidate[]
+  ivmj: RankedCandidate[]
+  ivstar: RankedCandidate[]
+  borda: RankedCandidate[]
+  irv: RankedCandidate[]
+  condorcet: RankedCandidate[]
+  condorcetParadox: boolean
+  dictator: RankedCandidate[]
+  dictatorName: string | null
 }
 
 export interface Bindings {

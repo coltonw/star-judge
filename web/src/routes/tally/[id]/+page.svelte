@@ -4,10 +4,10 @@
   import { getTally, checkVoted, getSessionId, ApiError } from '$lib/api'
   import { getMockScenario } from '$lib/mock-scenarios'
   import TallyChart from '$lib/components/TallyChart.svelte'
-  import type { TallyResponse } from '$lib/types'
+  import type { TallyResponse, RankedCandidate } from '$lib/types'
 
-  const isMock = $derived(isNaN(parseInt(page.params.id, 10)))
-  const ballotId = $derived(isMock ? 0 : parseInt(page.params.id, 10))
+  const isMock = $derived(isNaN(parseInt(page.params.id ?? '', 10)))
+  const ballotId = $derived(isMock ? 0 : parseInt(page.params.id ?? '', 10))
 
   let tally = $state<TallyResponse | null>(null)
   let hasVoted = $state(false)
@@ -20,9 +20,7 @@
       tally = await getTally(ballotId)
       lastUpdated = new Date()
     } catch (e) {
-      if (!tally) {
-        error = e instanceof ApiError ? e.message : 'Failed to load results.'
-      }
+      if (!tally) error = e instanceof ApiError ? e.message : 'Failed to load results.'
     } finally {
       loading = false
     }
@@ -30,30 +28,80 @@
 
   onMount(() => {
     if (isMock) {
-      const scenario = getMockScenario(page.params.id)
+      const scenario = getMockScenario(page.params.id ?? '')
       if (scenario) {
         tally = scenario.tally
       } else {
-        error = `Unknown scenario: ${page.params.id}`
+        error = `Unknown scenario: ${page.params.id ?? ''}`
       }
       loading = false
       return
     }
-
     fetchTally()
     checkVoted(ballotId, getSessionId()).then((r) => { hasVoted = r.hasVoted })
     const interval = setInterval(fetchTally, 5000)
     return () => clearInterval(interval)
   })
 
-  let mjWinner  = $derived(tally?.mj[0]?.name ?? null)
-  let starWinner = $derived(tally?.star[0]?.name ?? null)
-  let mjTied    = $derived((tally?.mj.length ?? 0) > 1 && tally!.mj[0]?.rank === tally!.mj[1]?.rank)
-  let starTied  = $derived((tally?.star.length ?? 0) > 1 && tally!.star[0]?.rank === tally!.star[1]?.rank)
-  let agree     = $derived(!mjTied && !starTied && mjWinner !== null && mjWinner === starWinner)
-  let bothTied  = $derived(mjTied && starTied)
-  let mjTiedNames  = $derived(mjTied  ? tally!.mj.filter(c => c.rank === 1).map(c => c.name)  : [])
-  let starTiedNames = $derived(starTied ? tally!.star.filter(c => c.rank === 1).map(c => c.name) : [])
+  // ── Per-method winner helpers ─────────────────────────────────────────────
+  function firstNonVetoed(arr: RankedCandidate[] | undefined) {
+    return arr?.find(c => !c.vetoed)?.name ?? null
+  }
+  function isTied(arr: RankedCandidate[] | undefined) {
+    const survivors = arr?.filter(c => !c.vetoed) ?? []
+    return survivors.length > 1 && survivors[0].rank === survivors[1].rank
+  }
+  function tiedNames(arr: RankedCandidate[] | undefined) {
+    const survivors = arr?.filter(c => !c.vetoed) ?? []
+    if (!isTied(arr)) return []
+    return survivors.filter(c => c.rank === survivors[0].rank).map(c => c.name)
+  }
+  function winnerLabel(arr: RankedCandidate[] | undefined, paradox = false): string {
+    if (paradox) return '🔄 Cycle'
+    if (isTied(arr)) return tiedNames(arr).join(' & ') + ' (tie)'
+    return firstNonVetoed(arr) ?? '—'
+  }
+
+  const officialMethod = $derived(tally?.officialMethod ?? 'mj')
+
+  let methods = $derived(tally ? [
+    { key: 'mj',        label: 'MJ',        winner: winnerLabel(tally.mj) },
+    { key: 'ivmj',      label: 'IV·MJ',     winner: winnerLabel(tally.ivmj) },
+    { key: 'star',      label: 'STAR',       winner: winnerLabel(tally.star) },
+    { key: 'ivstar',    label: 'IV·STAR',    winner: winnerLabel(tally.ivstar) },
+    { key: 'borda',     label: 'Borda',      winner: winnerLabel(tally.borda) },
+    { key: 'irv',       label: 'IRV',        winner: winnerLabel(tally.irv) },
+    { key: 'condorcet', label: 'Condorcet',  winner: winnerLabel(tally.condorcet, tally.condorcetParadox) },
+    { key: 'dictator',  label: 'Dictator',   winner: tally.dictatorName ? winnerLabel(tally.dictator) : '—' },
+  ].sort((a, b) => (b.key === officialMethod ? 1 : 0) - (a.key === officialMethod ? 1 : 0)) : [])
+
+  // Returns null (no consensus), or a winner string (may be a tie like "A & B (tie)").
+  // All applicable methods must agree on the same string for consensus to fire.
+  // Condorcet is excluded when there's a paradox; Dictator is excluded when there's no voter.
+  let consensusWinner = $derived(
+    (!tally || tally.voteCount === 0) ? null : (() => {
+      const applicable = methods.filter(m =>
+        (m.key !== 'condorcet' || !tally!.condorcetParadox) &&
+        m.winner !== '—'
+      )
+      if (applicable.length === 0) return null
+      const unique = new Set(applicable.map(m => m.winner))
+      return unique.size === 1 ? [...unique][0] : null
+    })()
+  )
+
+  // If consensus is a tie, extract the tied names and pick one deterministically.
+  // Seed from ballotId + voteCount so it's stable across refreshes but varies per ballot.
+  let tiebreaker = $derived(
+    (!consensusWinner || !consensusWinner.includes('(tie)')) ? null : (() => {
+      const names = consensusWinner.replace(' (tie)', '').split(' & ')
+      const seed = (tally?.ballotId ?? 0) * 997 + (tally?.voteCount ?? 0)
+      return names[seed % names.length]
+    })()
+  )
+
+  let anyVetoedInMJ   = $derived(tally?.ivmj.some(c => c.vetoed) ?? false)
+  let anyVetoedInStar = $derived(tally?.ivstar.some(c => c.vetoed) ?? false)
 </script>
 
 <svelte:head>
@@ -92,78 +140,152 @@
       {/if}
     </div>
   {:else}
+    <!-- ── Winners summary ──────────────────────────────────────────────── -->
     <div class="winners card">
-      {#if bothTied}
-        <div class="winner-tie">
-          <span class="crown">🤝</span>
-          <span>Both methods deadlock — <strong>{mjTiedNames.join(' and ')}</strong> are tied at #1.</span>
-        </div>
-      {:else if mjTied}
-        <div class="winner-split">
-          <div>
-            <span class="method-tag">MJ says</span>
-            <span class="winner-name">{mjTiedNames.join(' & ')} <span class="tie-label">(tie)</span></span>
+      {#if consensusWinner}
+        {#if tiebreaker}
+          <div class="winner-agree">
+            <span class="crown">👑</span>
+            <div class="tie-consensus">
+              <span>All methods agree: <strong>{consensusWinner}</strong></span>
+              <span class="tiebreaker-line">Random tiebreaker: <strong class="tiebreaker-pick">{tiebreaker}</strong></span>
+            </div>
           </div>
-          <div class="vs">⚡ vs ⚡</div>
-          <div>
-            <span class="method-tag">STAR says</span>
-            <span class="winner-name">{starWinner}</span>
+        {:else}
+          <div class="winner-agree">
+            <span class="crown">👑</span>
+            <span>All methods agree: <strong>{consensusWinner}</strong> wins!</span>
           </div>
-        </div>
-      {:else if starTied}
-        <div class="winner-split">
-          <div>
-            <span class="method-tag">MJ says</span>
-            <span class="winner-name">{mjWinner}</span>
-          </div>
-          <div class="vs">⚡ vs ⚡</div>
-          <div>
-            <span class="method-tag">STAR says</span>
-            <span class="winner-name">{starTiedNames.join(' & ')} <span class="tie-label">(tie)</span></span>
-          </div>
-        </div>
-      {:else if agree}
-        <div class="winner-agree">
-          <span class="crown">👑</span>
-          <span>Both methods agree: <strong>{mjWinner}</strong> wins!</span>
-        </div>
+        {/if}
       {:else}
-        <div class="winner-split">
-          <div>
-            <span class="method-tag">MJ says</span>
-            <span class="winner-name">{mjWinner}</span>
-          </div>
-          <div class="vs">⚡ vs ⚡</div>
-          <div>
-            <span class="method-tag">STAR says</span>
-            <span class="winner-name">{starWinner}</span>
-          </div>
+        <div class="winner-grid">
+          {#each methods as m}
+            <div class="method-winner" class:method-winner-official={m.key === officialMethod}>
+              <span class="method-tag">{m.label}{#if m.key === officialMethod} ★{/if}</span>
+              <span class="winner-name" class:cycle={m.winner.startsWith('🔄')} class:tied={m.winner.includes('tie')}>{m.winner}</span>
+            </div>
+          {/each}
         </div>
       {/if}
     </div>
 
+    <!-- ── Method sections ─────────────────────────────────────────────── -->
     <div class="methods">
-      <section class="method-section card">
-        <div class="method-header">
-          <h2>Majority Judgment</h2>
-          <p class="method-desc">
-            Each game's median grade wins. When two games share a median, the one whose
-            median is hardest to "move" wins — this makes it resilient to strategic voting.
-          </p>
-        </div>
-        <TallyChart candidates={tally.mj} mode="mj" />
-      </section>
 
-      <section class="method-section card">
-        <div class="method-header">
-          <h2>STAR Voting</h2>
-          <p class="method-desc">
-            Average score (0–5) determines the top 2 finalists. Those two then go
-            head-to-head: whoever more voters rated higher wins the runoff.
-          </p>
-        </div>
-        <TallyChart candidates={tally.star} mode="star" />
-      </section>
+      <!-- Row 1: MJ pair -->
+      <div class="method-pair">
+        <section class="method-section card" class:official-section={officialMethod === 'mj'}>
+          <div class="method-header">
+            <h2>
+              <a class="wiki-link" href="https://en.wikipedia.org/wiki/Majority_judgment" target="_blank" rel="noopener">Majority Judgment</a>
+              {#if officialMethod === 'mj'}<span class="official-badge">official</span>{/if}
+            </h2>
+            <p class="method-desc">Each game's median grade wins. Ties broken by how resilient that median is to being moved — resistant to strategic voting.</p>
+          </div>
+          <TallyChart candidates={tally.mj} mode="mj" />
+        </section>
+        <section class="method-section card iv-section" class:official-section={officialMethod === 'ivmj'}>
+          <div class="method-header">
+            <h2>
+              IV · Majority Judgment
+              {#if officialMethod === 'ivmj'}<span class="official-badge">official</span>{/if}
+            </h2>
+            <p class="method-desc">Games with more Hard Passes than the least-vetoed game are disqualified first, then MJ ranks the survivors.</p>
+          </div>
+          {#if !anyVetoedInMJ}
+            <p class="no-veto-note">No games vetoed — same result as MJ.</p>
+          {:else}
+            <TallyChart candidates={tally.ivmj} mode="mj" />
+          {/if}
+        </section>
+      </div>
+
+      <!-- Row 2: STAR pair -->
+      <div class="method-pair">
+        <section class="method-section card" class:official-section={officialMethod === 'star'}>
+          <div class="method-header">
+            <h2>
+              <a class="wiki-link" href="https://en.wikipedia.org/wiki/STAR_voting" target="_blank" rel="noopener">STAR Voting</a>
+              {#if officialMethod === 'star'}<span class="official-badge">official</span>{/if}
+            </h2>
+            <p class="method-desc">Highest average score picks the top 2 finalists. Ties for 2nd are broken by pairwise head-to-head. Those two go head-to-head: whoever more voters rated higher wins the runoff.</p>
+          </div>
+          <TallyChart candidates={tally.star} mode="star" />
+        </section>
+        <section class="method-section card iv-section" class:official-section={officialMethod === 'ivstar'}>
+          <div class="method-header">
+            <h2>
+              IV · STAR Voting
+              {#if officialMethod === 'ivstar'}<span class="official-badge">official</span>{/if}
+            </h2>
+            <p class="method-desc">Vetoed games are removed before scoring. Survivors compete in the normal STAR score + runoff.</p>
+          </div>
+          {#if !anyVetoedInStar}
+            <p class="no-veto-note">No games vetoed — same result as STAR.</p>
+          {:else}
+            <TallyChart candidates={tally.ivstar} mode="star" />
+          {/if}
+        </section>
+      </div>
+
+      <!-- Row 3: Borda + IRV -->
+      <div class="method-pair">
+        <section class="method-section card" class:official-section={officialMethod === 'borda'}>
+          <div class="method-header">
+            <h2>
+              <a class="wiki-link" href="https://en.wikipedia.org/wiki/Borda_count" target="_blank" rel="noopener">Borda Count</a>
+              {#if officialMethod === 'borda'}<span class="official-badge">official</span>{/if}
+            </h2>
+            <p class="method-desc">Each voter ranks all games. Points are awarded by rank (top = N−1 pts, bottom = 0 pts). Tied grades split the points evenly. Highest total wins.</p>
+          </div>
+          <TallyChart candidates={tally.borda} mode="borda" />
+        </section>
+        <section class="method-section card" class:official-section={officialMethod === 'irv'}>
+          <div class="method-header">
+            <h2>
+              <a class="wiki-link" href="https://en.wikipedia.org/wiki/Instant-runoff_voting" target="_blank" rel="noopener">Instant Runoff (IRV)</a>
+              {#if officialMethod === 'irv'}<span class="official-badge">official</span>{/if}
+            </h2>
+            <p class="method-desc">Voters' top remaining choice gets their vote each round. The last-place game is eliminated and votes redistribute — until one game holds a majority.</p>
+          </div>
+          <TallyChart candidates={tally.irv} mode="irv" />
+        </section>
+      </div>
+
+      <!-- Row 4: Condorcet + Dictator -->
+      <div class="method-pair">
+        <section class="method-section card" class:official-section={officialMethod === 'condorcet'}>
+          <div class="method-header">
+            <h2>
+              <a class="wiki-link" href="https://en.wikipedia.org/wiki/Condorcet_method" target="_blank" rel="noopener">Condorcet</a>
+              {#if officialMethod === 'condorcet'}<span class="official-badge">official</span>{/if}
+            </h2>
+            <p class="method-desc">Every game fights every other game head-to-head. The game that beats all others wins. If there's a rock-paper-scissors cycle… nobody wins. 🔄</p>
+          </div>
+          {#if tally.condorcetParadox}
+            <div class="paradox-banner">
+              🔄 <strong>Condorcet paradox!</strong> A beats B beats C beats A — no winner exists.
+            </div>
+          {/if}
+          <TallyChart candidates={tally.condorcet} mode="condorcet" condorcetParadox={tally.condorcetParadox} />
+        </section>
+        <section class="method-section card dictator-section" class:official-section={officialMethod === 'dictator'}>
+          <div class="method-header">
+            <h2>
+              Dictator
+              {#if officialMethod === 'dictator'}<span class="official-badge">official</span>{/if}
+            </h2>
+            <p class="method-desc">Democracy is cancelled. The last person to vote picks everything. Bars show what everyone wanted — ranking shows what the dictator gets.</p>
+          </div>
+          {#if tally.dictatorName}
+            <p class="dictator-name">👑 Dictator: <strong>{tally.dictatorName}</strong></p>
+          {:else}
+            <p class="no-veto-note">No votes yet.</p>
+          {/if}
+          <TallyChart candidates={tally.dictator} mode="dictator" dictatorName={tally.dictatorName} />
+        </section>
+      </div>
+
     </div>
   {/if}
 
@@ -203,10 +325,7 @@
     color: var(--accent);
   }
 
-  .your-vote {
-    color: var(--teal);
-    font-size: .85rem;
-  }
+  .your-vote { color: var(--teal); font-size: .85rem; }
 
   .no-votes {
     text-align: center;
@@ -219,13 +338,14 @@
     margin-bottom: 1.5rem;
   }
 
+  /* ── Winners card ────────────────────────────────────────────────────── */
   .winners {
     margin-bottom: 1.5rem;
-    text-align: center;
     padding: 1.25rem;
+    text-align: center;
   }
 
-  .winner-agree, .winner-tie {
+  .winner-agree {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -233,42 +353,71 @@
     font-size: 1.1rem;
   }
 
-  .crown { font-size: 1.5rem; }
+  .crown { font-size: 1.5rem; flex-shrink: 0; }
 
-  .winner-split {
+  .tie-consensus {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1.5rem;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: .25rem;
+    text-align: left;
   }
 
-  .method-tag {
-    display: block;
-    font-size: .75rem;
+  .tiebreaker-line {
+    font-size: .82rem;
     color: var(--text-muted);
-    margin-bottom: .2rem;
+  }
+
+  .tiebreaker-pick { color: var(--grade-excellent); }
+
+  .winner-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: .75rem 1rem;
+    text-align: left;
+  }
+
+  @media (max-width: 600px) {
+    .winner-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .method-winner { display: flex; flex-direction: column; gap: .15rem; }
+
+  .method-winner-official .method-tag { color: var(--teal); }
+  .method-winner-official .winner-name { color: var(--teal); }
+
+  .method-tag {
+    font-size: .7rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
   }
 
   .winner-name {
-    font-size: 1.1rem;
+    font-size: .95rem;
     font-weight: 600;
     color: var(--grade-excellent);
   }
 
-  .tie-label {
-    font-size: .8rem;
-    font-weight: 400;
-    color: var(--text-muted);
-  }
+  .winner-name.cycle { color: var(--accent); font-size: .85rem; }
+  .winner-name.tied  { color: var(--text-muted); font-size: .85rem; }
 
-  .vs { color: var(--text-muted); font-size: .9rem; }
-
+  /* ── Method sections ─────────────────────────────────────────────────── */
   .methods {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1rem;
     margin-bottom: 1.5rem;
+  }
+
+  .method-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  @media (max-width: 720px) {
+    .method-pair { grid-template-columns: 1fr; }
   }
 
   .method-section { padding: 1.5rem; }
@@ -280,6 +429,69 @@
     margin-top: .3rem;
     line-height: 1.5;
   }
+
+  .iv-section {
+    border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
+  }
+
+  .dictator-section {
+    border-color: color-mix(in srgb, var(--grade-excellent) 25%, var(--border));
+  }
+
+  .official-section {
+    border-color: var(--teal) !important;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--teal) 25%, transparent);
+  }
+
+  .official-badge {
+    font-size: .65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    padding: .1rem .4rem;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--teal) 18%, var(--bg-card));
+    color: var(--teal);
+    vertical-align: middle;
+    margin-left: .4rem;
+  }
+
+  /* Wikipedia links — invisible until hovered */
+  .wiki-link {
+    color: inherit;
+    text-decoration: none;
+  }
+  .wiki-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: color-mix(in srgb, var(--text-muted) 60%, transparent);
+  }
+
+  .no-veto-note {
+    color: var(--text-muted);
+    font-size: .82rem;
+    font-style: italic;
+    padding: 1rem 0;
+  }
+
+  .paradox-banner {
+    background: color-mix(in srgb, var(--accent-dim) 25%, var(--bg-card));
+    border: 1px solid var(--accent-dim);
+    border-radius: 6px;
+    padding: .65rem .9rem;
+    font-size: .85rem;
+    color: var(--accent);
+    margin-bottom: 1rem;
+    line-height: 1.4;
+  }
+
+  .dictator-name {
+    font-size: .85rem;
+    color: var(--text-muted);
+    margin-bottom: .75rem;
+  }
+
+  .dictator-name strong { color: var(--grade-excellent); }
 
   .actions { display: flex; gap: 1rem; margin-bottom: 2rem; }
 </style>

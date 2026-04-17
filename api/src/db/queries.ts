@@ -1,4 +1,4 @@
-import type { Ballot, Candidate, Vote, Grade, Bindings } from './types'
+import type { Ballot, Candidate, Vote, Grade, Bindings, VotingMethodKey } from './types'
 
 function parseBallot(row: Record<string, unknown>): Ballot {
   return {
@@ -6,6 +6,7 @@ function parseBallot(row: Record<string, unknown>): Ballot {
     name: row.name as string,
     candidates: JSON.parse(row.candidates as string) as Candidate[],
     active: (row.active as number) === 1,
+    officialMethod: (row.official_method as VotingMethodKey | null) ?? 'mj',
     created_at: row.created_at as string,
   }
 }
@@ -43,11 +44,12 @@ export async function getBallot(db: Bindings['DB'], id: number): Promise<Ballot 
 export async function createBallot(
   db: Bindings['DB'],
   name: string,
-  candidates: Candidate[]
+  candidates: Candidate[],
+  officialMethod: VotingMethodKey = 'mj'
 ): Promise<Ballot> {
   const result = await db
-    .prepare('INSERT INTO ballots (name, candidates) VALUES (?, ?) RETURNING *')
-    .bind(name, JSON.stringify(candidates))
+    .prepare('INSERT INTO ballots (name, candidates, official_method) VALUES (?, ?, ?) RETURNING *')
+    .bind(name, JSON.stringify(candidates), officialMethod)
     .first()
   return parseBallot(result!)
 }
@@ -57,13 +59,14 @@ export async function updateBallot(
   id: number,
   name: string,
   candidates: Candidate[],
-  active: boolean
+  active: boolean,
+  officialMethod: VotingMethodKey = 'mj'
 ): Promise<Ballot | null> {
   const result = await db
     .prepare(
-      'UPDATE ballots SET name = ?, candidates = ?, active = ? WHERE id = ? RETURNING *'
+      'UPDATE ballots SET name = ?, candidates = ?, active = ?, official_method = ? WHERE id = ? RETURNING *'
     )
-    .bind(name, JSON.stringify(candidates), active ? 1 : 0, id)
+    .bind(name, JSON.stringify(candidates), active ? 1 : 0, officialMethod, id)
     .first()
   return result ? parseBallot(result) : null
 }

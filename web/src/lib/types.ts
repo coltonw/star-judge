@@ -21,6 +21,19 @@ export const GRADE_COLORS: Record<Grade, string> = {
   poor: '#dd776e',
 }
 
+export type VotingMethodKey = 'mj' | 'ivmj' | 'star' | 'ivstar' | 'borda' | 'irv' | 'condorcet' | 'dictator'
+
+export const VOTING_METHOD_LABELS: Record<VotingMethodKey, string> = {
+  mj:        'Majority Judgment',
+  ivmj:      'IV · Majority Judgment',
+  star:      'STAR Voting',
+  ivstar:    'IV · STAR Voting',
+  borda:     'Borda Count',
+  irv:       'Instant Runoff (IRV)',
+  condorcet: 'Condorcet',
+  dictator:  'Dictator',
+}
+
 export interface Candidate {
   id: string
   name: string
@@ -32,6 +45,7 @@ export interface Ballot {
   name: string
   candidates: Candidate[]
   active: boolean
+  officialMethod: VotingMethodKey
   created_at: string
 }
 
@@ -41,12 +55,26 @@ export interface RankedCandidate extends Candidate {
   totalVotes: number
   starScore?: number
   inRunoff?: boolean
+  vetoed?: boolean
+  hardPassCount?: number
+  bordaScore?: number
+  irvElimRound?: number
+  pairwiseWins?: number
 }
 
 export interface TallyResponse {
   ballotId: number
   ballotName: string
+  officialMethod: VotingMethodKey
   voteCount: number
   mj: RankedCandidate[]
   star: RankedCandidate[]
+  ivmj: RankedCandidate[]
+  ivstar: RankedCandidate[]
+  borda: RankedCandidate[]
+  irv: RankedCandidate[]
+  condorcet: RankedCandidate[]
+  condorcetParadox: boolean
+  dictator: RankedCandidate[]
+  dictatorName: string | null
 }

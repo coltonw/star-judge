@@ -4,10 +4,19 @@
   let {
     candidates,
     mode = 'mj',
+    showVetoed = true,
+    condorcetParadox = false,
+    dictatorName = null,
   }: {
     candidates: RankedCandidate[]
-    mode?: 'mj' | 'star'
+    mode?: 'mj' | 'star' | 'borda' | 'irv' | 'condorcet' | 'dictator'
+    showVetoed?: boolean
+    condorcetParadox?: boolean
+    dictatorName?: string | null
   } = $props()
+
+  let visibleCandidates = $derived(showVetoed ? candidates : candidates.filter(c => !c.vetoed))
+  let totalCandidates = $derived(candidates.length)
 
   function pct(candidate: RankedCandidate, grade: Grade): number {
     if (candidate.totalVotes === 0) return 0
@@ -31,19 +40,21 @@
   }
 </script>
 
-{#if candidates.length === 0}
+{#if visibleCandidates.length === 0}
   <p class="empty">No votes yet — be the first!</p>
 {:else}
   <div class="chart">
-    {#each candidates as candidate, i (candidate.id)}
+    {#each visibleCandidates as candidate, i (candidate.id)}
       {@const median = medianGrade(candidate)}
-      <div class="row" style="animation-delay: {i * 40}ms">
+      <div class="row" class:vetoed-row={candidate.vetoed} style="animation-delay: {i * 40}ms">
         <div class="meta">
           <span class="rank">#{candidate.rank}</span>
           <span class="name">{candidate.name}</span>
-          {#if mode === 'mj'}
+          {#if candidate.vetoed}
+            <span class="veto-badge">⊘ vetoed · {candidate.hardPassCount} HP</span>
+          {:else if mode === 'mj'}
             <span class="tag" style="color: {GRADE_COLORS[median]}">{GRADE_LABELS[median]}</span>
-          {:else}
+          {:else if mode === 'star'}
             <span class="tag star-score">
               {avgScore(candidate)}<span class="out-of">/5</span>
             </span>
@@ -51,6 +62,28 @@
               <span class="runoff-badge" class:winner={candidate.rank === 1}>
                 {candidate.rank === 1 ? '🏆 Runoff winner' : 'Runoff finalist'}
               </span>
+            {/if}
+          {:else if mode === 'borda'}
+            <span class="tag borda-score">
+              {candidate.bordaScore?.toFixed(1)} <span class="out-of">pts</span>
+            </span>
+          {:else if mode === 'irv'}
+            {#if candidate.irvElimRound !== undefined}
+              <span class="elim-badge">elim. round {candidate.irvElimRound}</span>
+            {:else}
+              <span class="tag irv-winner">✓ survived</span>
+            {/if}
+          {:else if mode === 'condorcet'}
+            {#if condorcetParadox && candidate.pairwiseWins === (totalCandidates - 1) / 2}
+              <span class="paradox-badge">🔄 cycle</span>
+            {:else}
+              <span class="tag condorcet-score">
+                {candidate.pairwiseWins}<span class="out-of">/{totalCandidates - 1} wins</span>
+              </span>
+            {/if}
+          {:else if mode === 'dictator'}
+            {#if candidate.rank === 1}
+              <span class="tag dictator-pick">👑 {dictatorName ?? 'dictator'}'s pick</span>
             {/if}
           {/if}
         </div>
@@ -171,6 +204,55 @@
     height: 100%;
     transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     min-width: 2px;
+  }
+
+  .borda-score { color: var(--accent); }
+
+  .irv-winner { color: var(--teal); }
+
+  .elim-badge {
+    font-size: .68rem;
+    font-weight: 600;
+    padding: .1rem .4rem;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--text-muted) 15%, var(--bg-card));
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .condorcet-score { color: var(--accent); }
+
+  .paradox-badge {
+    font-size: .68rem;
+    font-weight: 600;
+    padding: .1rem .4rem;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--accent-dim) 30%, var(--bg-card));
+    color: var(--accent);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .dictator-pick {
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--grade-excellent);
+  }
+
+  .vetoed-row {
+    opacity: 0.45;
+  }
+
+  .veto-badge {
+    font-size: .68rem;
+    font-weight: 600;
+    padding: .1rem .4rem;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--danger) 18%, var(--bg-card));
+    color: var(--danger);
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .empty {

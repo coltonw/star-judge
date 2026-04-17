@@ -1,10 +1,14 @@
 CREATE TABLE IF NOT EXISTS ballots (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  name        TEXT NOT NULL,
-  candidates  TEXT NOT NULL DEFAULT '[]',
-  active      INTEGER NOT NULL DEFAULT 1,
-  created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  name            TEXT NOT NULL,
+  candidates      TEXT NOT NULL DEFAULT '[]',
+  active          INTEGER NOT NULL DEFAULT 1,
+  official_method TEXT NOT NULL DEFAULT 'mj',
+  created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Migration for existing databases:
+-- ALTER TABLE ballots ADD COLUMN official_method TEXT NOT NULL DEFAULT 'mj';
 
 CREATE TABLE IF NOT EXISTS votes (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,

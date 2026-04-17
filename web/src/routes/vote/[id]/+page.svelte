@@ -6,7 +6,7 @@
   import type { ExistingVote } from '$lib/api'
   import { GRADES, GRADE_LABELS, GRADE_COLORS, type Grade, type Ballot } from '$lib/types'
 
-  const ballotId = $derived(parseInt(page.params.id, 10))
+  const ballotId = $derived(parseInt(page.params.id ?? '', 10))
 
   let ballot = $state<Ballot | null>(null)
   let ratings = $state<Record<string, Grade>>({})
@@ -17,9 +17,21 @@
   let submitting = $state(false)
   let error = $state('')
 
+  let submitAttempted = $state(false)
+
   let nameError = $derived(
     nameTouched && !voterName.trim() ? 'Please enter your name.' : ''
   )
+
+  let hardPassError = $derived((() => {
+    if (!submitAttempted || !ballot) return ''
+    const required = Math.ceil(ballot.candidates.length / 2)
+    const abovePoor = ballot.candidates.filter(c => ratings[c.id] && ratings[c.id] !== 'poor').length
+    if (abovePoor < required) {
+      return `Rate at least ${required} game${required === 1 ? '' : 's'} above Hard Pass — this prevents gaming the veto.`
+    }
+    return ''
+  })())
 
   onMount(async () => {
     try {
@@ -55,7 +67,8 @@
 
   async function submit() {
     nameTouched = true
-    if (!ballot || !voterName.trim() || !allRated()) return
+    submitAttempted = true
+    if (!ballot || !voterName.trim() || !allRated() || hardPassError) return
     submitting = true
     error = ''
     try {
@@ -138,6 +151,10 @@
         </div>
       {/each}
     </div>
+
+    {#if hardPassError}
+      <p class="field-error hp-error">{hardPassError}</p>
+    {/if}
 
     {#if error}
       <p class="error-msg">{error}</p>
@@ -239,6 +256,10 @@
     color: var(--danger);
     font-size: .82rem;
     margin-top: .3rem;
+  }
+
+  .hp-error {
+    margin-bottom: .75rem;
   }
 
   input[aria-invalid="true"] {

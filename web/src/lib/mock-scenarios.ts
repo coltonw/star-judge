@@ -7,70 +7,137 @@ export interface MockScenario {
   tally: TallyResponse
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+// gradeCounts shorthand
+type GC = { excellent: number; verygood: number; good: number; average: number; fair: number; poor: number }
+const gc = (e: number, vg: number, g: number, av: number, f: number, p: number): GC =>
+  ({ excellent: e, verygood: vg, good: g, average: av, fair: f, poor: p })
+
 // ─── Scenario 1: Methods Disagree ────────────────────────────────────────────
-// Catan wins MJ (polarizing: 4 Hyped + 3 Hard Pass → highest median).
-// Pandemic wins STAR (7 Into It → highest total score 28).
+// MJ: Catan #1 (Excellent median, polarizing 4E+3P).
+// STAR: Pandemic #1 (7 VG = score 28, consistent crowd-pleaser).
+// Borda/IRV/Condorcet: Pandemic wins (consistent middle-high beats polarizer).
+// Dictator: "Sam" picks Catan (personal enthusiasm).
 const diverge: MockScenario = {
   id: 'mock-diverge',
   label: 'Methods Disagree',
   description: 'MJ picks the polarizing crowd-splitter; STAR picks the crowd-pleaser.',
   tally: {
-    ballotId: 0,
-    ballotName: 'Game Night — Methods Compared',
-    voteCount: 7,
+    ballotId: 0, ballotName: 'Game Night — Methods Compared', officialMethod: 'mj', voteCount: 7,
     mj: [
-      { id: 'catan',     name: 'Catan',          thumbnail: '', rank: 1, totalVotes: 7,
-        gradeCounts: { excellent:4, verygood:0, good:0, average:0, fair:0, poor:3 } },
-      { id: 'pandemic',  name: 'Pandemic',        thumbnail: '', rank: 2, totalVotes: 7,
-        gradeCounts: { excellent:0, verygood:7, good:0, average:0, fair:0, poor:0 } },
-      { id: 'wingspan',  name: 'Wingspan',        thumbnail: '', rank: 3, totalVotes: 7,
-        gradeCounts: { excellent:1, verygood:4, good:2, average:0, fair:0, poor:0 } },
-      { id: 'codenames', name: 'Codenames',       thumbnail: '', rank: 4, totalVotes: 7,
-        gradeCounts: { excellent:0, verygood:4, good:3, average:0, fair:0, poor:0 } },
-      { id: 'ttr',       name: 'Ticket to Ride',  thumbnail: '', rank: 5, totalVotes: 7,
-        gradeCounts: { excellent:0, verygood:0, good:4, average:3, fair:0, poor:0 } },
+      { id: 'catan',    name: 'Catan',         thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(4,0,0,0,0,3) },
+      { id: 'pandemic', name: 'Pandemic',       thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(0,7,0,0,0,0) },
+      { id: 'wingspan', name: 'Wingspan',       thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(1,4,2,0,0,0) },
+      { id: 'codenames',name: 'Codenames',      thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(0,4,3,0,0,0) },
+      { id: 'ttr',      name: 'Ticket to Ride', thumbnail: '', rank: 5, totalVotes: 7, gradeCounts: gc(0,0,4,3,0,0) },
     ],
     star: [
-      { id: 'pandemic',  name: 'Pandemic',        thumbnail: '', rank: 1, totalVotes: 7, starScore: 28, inRunoff: true,
-        gradeCounts: { excellent:0, verygood:7, good:0, average:0, fair:0, poor:0 } },
-      { id: 'wingspan',  name: 'Wingspan',        thumbnail: '', rank: 2, totalVotes: 7, starScore: 27, inRunoff: true,
-        gradeCounts: { excellent:1, verygood:4, good:2, average:0, fair:0, poor:0 } },
-      { id: 'codenames', name: 'Codenames',       thumbnail: '', rank: 3, totalVotes: 7, starScore: 25,
-        gradeCounts: { excellent:0, verygood:4, good:3, average:0, fair:0, poor:0 } },
-      { id: 'catan',     name: 'Catan',           thumbnail: '', rank: 4, totalVotes: 7, starScore: 20,
-        gradeCounts: { excellent:4, verygood:0, good:0, average:0, fair:0, poor:3 } },
-      { id: 'ttr',       name: 'Ticket to Ride',  thumbnail: '', rank: 5, totalVotes: 7, starScore: 18,
-        gradeCounts: { excellent:0, verygood:0, good:4, average:3, fair:0, poor:0 } },
+      { id: 'pandemic', name: 'Pandemic',       thumbnail: '', rank: 1, totalVotes: 7, starScore: 28, inRunoff: true,  gradeCounts: gc(0,7,0,0,0,0) },
+      { id: 'wingspan', name: 'Wingspan',       thumbnail: '', rank: 2, totalVotes: 7, starScore: 27, inRunoff: true,  gradeCounts: gc(1,4,2,0,0,0) },
+      { id: 'codenames',name: 'Codenames',      thumbnail: '', rank: 3, totalVotes: 7, starScore: 25,                  gradeCounts: gc(0,4,3,0,0,0) },
+      { id: 'catan',    name: 'Catan',          thumbnail: '', rank: 4, totalVotes: 7, starScore: 20,                  gradeCounts: gc(4,0,0,0,0,3) },
+      { id: 'ttr',      name: 'Ticket to Ride', thumbnail: '', rank: 5, totalVotes: 7, starScore: 18,                  gradeCounts: gc(0,0,4,3,0,0) },
     ],
+    ivmj: [
+      { id: 'pandemic', name: 'Pandemic',       thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(0,7,0,0,0,0) },
+      { id: 'wingspan', name: 'Wingspan',       thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(1,4,2,0,0,0) },
+      { id: 'codenames',name: 'Codenames',      thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0,4,3,0,0,0) },
+      { id: 'ttr',      name: 'Ticket to Ride', thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(0,0,4,3,0,0) },
+      { id: 'catan',    name: 'Catan',          thumbnail: '', rank: 5, totalVotes: 7, vetoed: true, hardPassCount: 3, gradeCounts: gc(4,0,0,0,0,3) },
+    ],
+    ivstar: [
+      { id: 'pandemic', name: 'Pandemic',       thumbnail: '', rank: 1, totalVotes: 7, starScore: 28, inRunoff: true,  gradeCounts: gc(0,7,0,0,0,0) },
+      { id: 'wingspan', name: 'Wingspan',       thumbnail: '', rank: 2, totalVotes: 7, starScore: 27, inRunoff: true,  gradeCounts: gc(1,4,2,0,0,0) },
+      { id: 'codenames',name: 'Codenames',      thumbnail: '', rank: 3, totalVotes: 7, starScore: 25,                  gradeCounts: gc(0,4,3,0,0,0) },
+      { id: 'ttr',      name: 'Ticket to Ride', thumbnail: '', rank: 4, totalVotes: 7, starScore: 18,                  gradeCounts: gc(0,0,4,3,0,0) },
+      { id: 'catan',    name: 'Catan',          thumbnail: '', rank: 5, totalVotes: 7, starScore: 20, vetoed: true, hardPassCount: 3, gradeCounts: gc(4,0,0,0,0,3) },
+    ],
+    // Borda: Pandemic wins (consistently high-ranked by all 7 voters)
+    borda: [
+      { id: 'pandemic', name: 'Pandemic',       thumbnail: '', rank: 1, totalVotes: 7, bordaScore: 21, gradeCounts: gc(0,7,0,0,0,0) },
+      { id: 'wingspan', name: 'Wingspan',       thumbnail: '', rank: 2, totalVotes: 7, bordaScore: 20, gradeCounts: gc(1,4,2,0,0,0) },
+      { id: 'codenames',name: 'Codenames',      thumbnail: '', rank: 3, totalVotes: 7, bordaScore: 18, gradeCounts: gc(0,4,3,0,0,0) },
+      { id: 'catan',    name: 'Catan',          thumbnail: '', rank: 4, totalVotes: 7, bordaScore: 16, gradeCounts: gc(4,0,0,0,0,3) },
+      { id: 'ttr',      name: 'Ticket to Ride', thumbnail: '', rank: 5, totalVotes: 7, bordaScore: 11, gradeCounts: gc(0,0,4,3,0,0) },
+    ],
+    // IRV: TTR → Codenames → Wingspan → Catan → Pandemic wins
+    irv: [
+      { id: 'pandemic', name: 'Pandemic',       thumbnail: '', rank: 1, totalVotes: 7,                                gradeCounts: gc(0,7,0,0,0,0) },
+      { id: 'catan',    name: 'Catan',          thumbnail: '', rank: 2, totalVotes: 7, irvElimRound: 4,               gradeCounts: gc(4,0,0,0,0,3) },
+      { id: 'wingspan', name: 'Wingspan',       thumbnail: '', rank: 3, totalVotes: 7, irvElimRound: 3,               gradeCounts: gc(1,4,2,0,0,0) },
+      { id: 'codenames',name: 'Codenames',      thumbnail: '', rank: 4, totalVotes: 7, irvElimRound: 2,               gradeCounts: gc(0,4,3,0,0,0) },
+      { id: 'ttr',      name: 'Ticket to Ride', thumbnail: '', rank: 5, totalVotes: 7, irvElimRound: 1,               gradeCounts: gc(0,0,4,3,0,0) },
+    ],
+    // Condorcet: Pandemic beats all head-to-head (consistent VG beats polarizing or mediocre)
+    condorcet: [
+      { id: 'pandemic', name: 'Pandemic',       thumbnail: '', rank: 1, totalVotes: 7, pairwiseWins: 4, gradeCounts: gc(0,7,0,0,0,0) },
+      { id: 'wingspan', name: 'Wingspan',       thumbnail: '', rank: 2, totalVotes: 7, pairwiseWins: 3, gradeCounts: gc(1,4,2,0,0,0) },
+      { id: 'codenames',name: 'Codenames',      thumbnail: '', rank: 3, totalVotes: 7, pairwiseWins: 2, gradeCounts: gc(0,4,3,0,0,0) },
+      { id: 'catan',    name: 'Catan',          thumbnail: '', rank: 4, totalVotes: 7, pairwiseWins: 1, gradeCounts: gc(4,0,0,0,0,3) },
+      { id: 'ttr',      name: 'Ticket to Ride', thumbnail: '', rank: 5, totalVotes: 7, pairwiseWins: 0, gradeCounts: gc(0,0,4,3,0,0) },
+    ],
+    condorcetParadox: false,
+    // Dictator: Sam voted last and loves Catan despite the haters
+    dictator: [
+      { id: 'catan',    name: 'Catan',          thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(4,0,0,0,0,3) },
+      { id: 'pandemic', name: 'Pandemic',       thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(0,7,0,0,0,0) },
+      { id: 'wingspan', name: 'Wingspan',       thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(1,4,2,0,0,0) },
+      { id: 'codenames',name: 'Codenames',      thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(0,4,3,0,0,0) },
+      { id: 'ttr',      name: 'Ticket to Ride', thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(0,0,4,3,0,0) },
+    ],
+    dictatorName: 'Sam',
   },
 }
 
 // ─── Scenario 2: Methods Agree ────────────────────────────────────────────────
-// Wingspan dominates both methods with near-unanimous Hyped ratings.
 const agree: MockScenario = {
   id: 'mock-agree',
   label: 'Methods Agree',
   description: 'Everyone loves Wingspan — both methods pick it without hesitation.',
   tally: {
-    ballotId: 0,
-    ballotName: 'Easy Night In',
-    voteCount: 5,
+    ballotId: 0, ballotName: 'Easy Night In', officialMethod: 'mj', voteCount: 5,
     mj: [
-      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 5,
-        gradeCounts: { excellent:4, verygood:1, good:0, average:0, fair:0, poor:0 } },
-      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 5,
-        gradeCounts: { excellent:1, verygood:2, good:2, average:0, fair:0, poor:0 } },
-      { id: 'azul',      name: 'Azul',      thumbnail: '', rank: 3, totalVotes: 5,
-        gradeCounts: { excellent:0, verygood:1, good:2, average:1, fair:1, poor:0 } },
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(4,1,0,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(1,2,2,0,0,0) },
+      { id: 'azul',      name: 'Azul',      thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0,1,2,1,1,0) },
     ],
     star: [
-      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 5, starScore: 24, inRunoff: true,
-        gradeCounts: { excellent:4, verygood:1, good:0, average:0, fair:0, poor:0 } },
-      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 5, starScore: 17, inRunoff: true,
-        gradeCounts: { excellent:1, verygood:2, good:2, average:0, fair:0, poor:0 } },
-      { id: 'azul',      name: 'Azul',      thumbnail: '', rank: 3, totalVotes: 5, starScore: 13,
-        gradeCounts: { excellent:0, verygood:1, good:2, average:1, fair:1, poor:0 } },
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 5, starScore: 24, inRunoff: true, gradeCounts: gc(4,1,0,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 5, starScore: 17, inRunoff: true, gradeCounts: gc(1,2,2,0,0,0) },
+      { id: 'azul',      name: 'Azul',      thumbnail: '', rank: 3, totalVotes: 5, starScore: 13,                 gradeCounts: gc(0,1,2,1,1,0) },
     ],
+    ivmj: [
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(4,1,0,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(1,2,2,0,0,0) },
+      { id: 'azul',      name: 'Azul',      thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0,1,2,1,1,0) },
+    ],
+    ivstar: [
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 5, starScore: 24, inRunoff: true, gradeCounts: gc(4,1,0,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 5, starScore: 17, inRunoff: true, gradeCounts: gc(1,2,2,0,0,0) },
+      { id: 'azul',      name: 'Azul',      thumbnail: '', rank: 3, totalVotes: 5, starScore: 13,                 gradeCounts: gc(0,1,2,1,1,0) },
+    ],
+    borda: [
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 5, bordaScore: 9,  gradeCounts: gc(4,1,0,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 5, bordaScore: 6,  gradeCounts: gc(1,2,2,0,0,0) },
+      { id: 'azul',      name: 'Azul',      thumbnail: '', rank: 3, totalVotes: 5, bordaScore: 3,  gradeCounts: gc(0,1,2,1,1,0) },
+    ],
+    irv: [
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 5,                 gradeCounts: gc(4,1,0,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 5, irvElimRound: 2, gradeCounts: gc(1,2,2,0,0,0) },
+      { id: 'azul',      name: 'Azul',      thumbnail: '', rank: 3, totalVotes: 5, irvElimRound: 1, gradeCounts: gc(0,1,2,1,1,0) },
+    ],
+    condorcet: [
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 5, pairwiseWins: 2, gradeCounts: gc(4,1,0,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 5, pairwiseWins: 1, gradeCounts: gc(1,2,2,0,0,0) },
+      { id: 'azul',      name: 'Azul',      thumbnail: '', rank: 3, totalVotes: 5, pairwiseWins: 0, gradeCounts: gc(0,1,2,1,1,0) },
+    ],
+    condorcetParadox: false,
+    dictator: [
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(4,1,0,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(1,2,2,0,0,0) },
+      { id: 'azul',      name: 'Azul',      thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0,1,2,1,1,0) },
+    ],
+    dictatorName: 'Pat',
   },
 }
 
@@ -80,107 +147,569 @@ const noVotes: MockScenario = {
   label: 'No Votes Yet',
   description: 'The ballot is open but nobody has voted yet.',
   tally: {
-    ballotId: 0,
-    ballotName: 'Friday Night Games',
-    voteCount: 0,
-    mj: [],
-    star: [],
+    ballotId: 0, ballotName: 'Friday Night Games', officialMethod: 'mj', voteCount: 0,
+    mj: [], star: [], ivmj: [], ivstar: [],
+    borda: [], irv: [], condorcet: [], condorcetParadox: false,
+    dictator: [], dictatorName: null,
   },
 }
 
 // ─── Scenario 4: Perfect Tie ──────────────────────────────────────────────────
-// Catan and Pandemic have identical grade distributions across all 7 voters.
-// Both methods rank them #1. Wingspan is a clear #3.
+// Catan and Pandemic have identical grade distributions — every method ties.
 const tie: MockScenario = {
   id: 'mock-tie',
   label: 'Perfect Tie',
   description: 'Two games have identical ratings — both methods deadlock at #1.',
   tally: {
-    ballotId: 0,
-    ballotName: 'Impossible to Choose',
-    voteCount: 7,
+    ballotId: 0, ballotName: 'Impossible to Choose', officialMethod: 'mj', voteCount: 7,
     mj: [
-      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 1, totalVotes: 7,
-        gradeCounts: { excellent:3, verygood:2, good:2, average:0, fair:0, poor:0 } },
-      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 1, totalVotes: 7,
-        gradeCounts: { excellent:3, verygood:2, good:2, average:0, fair:0, poor:0 } },
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 7,
-        gradeCounts: { excellent:0, verygood:1, good:3, average:3, fair:0, poor:0 } },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0,1,3,3,0,0) },
     ],
     star: [
-      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 1, totalVotes: 7, starScore: 29, inRunoff: true,
-        gradeCounts: { excellent:3, verygood:2, good:2, average:0, fair:0, poor:0 } },
-      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 1, totalVotes: 7, starScore: 29, inRunoff: true,
-        gradeCounts: { excellent:3, verygood:2, good:2, average:0, fair:0, poor:0 } },
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 7, starScore: 15,
-        gradeCounts: { excellent:0, verygood:1, good:3, average:3, fair:0, poor:0 } },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 1, totalVotes: 7, starScore: 29, inRunoff: true, gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 1, totalVotes: 7, starScore: 29, inRunoff: true, gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 7, starScore: 15,                 gradeCounts: gc(0,1,3,3,0,0) },
     ],
+    ivmj: [
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0,1,3,3,0,0) },
+    ],
+    ivstar: [
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 1, totalVotes: 7, starScore: 29, inRunoff: true, gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 1, totalVotes: 7, starScore: 29, inRunoff: true, gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 7, starScore: 15,                 gradeCounts: gc(0,1,3,3,0,0) },
+    ],
+    borda: [
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 1, totalVotes: 7, bordaScore: 11, gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 1, totalVotes: 7, bordaScore: 11, gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 7, bordaScore:  6, gradeCounts: gc(0,1,3,3,0,0) },
+    ],
+    irv: [
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 1, totalVotes: 7,                 gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 1, totalVotes: 7,                 gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 7, irvElimRound: 1, gradeCounts: gc(0,1,3,3,0,0) },
+    ],
+    condorcet: [
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 1, totalVotes: 7, pairwiseWins: 1, gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 1, totalVotes: 7, pairwiseWins: 1, gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 7, pairwiseWins: 0, gradeCounts: gc(0,1,3,3,0,0) },
+    ],
+    condorcetParadox: false,
+    dictator: [
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(3,2,2,0,0,0) },
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0,1,3,3,0,0) },
+    ],
+    dictatorName: 'Jordan',
   },
 }
 
 // ─── Scenario 5: STAR Runoff Flip ─────────────────────────────────────────────
-// Cosmic Encounter scores highest (25 pts) but most voters prefer Terra Mystica
-// head-to-head, so Terra Mystica wins the runoff despite a lower score (20 pts).
-// This shows STAR's anti-polarization property in action.
+// Cosmic scores highest (25) but Terra wins the runoff 5-2 head-to-head.
+// IRV + Condorcet also pick Terra (Terra is everyone's #1 or #2 except 2 HP voters).
+// IV vetoes Terra (2 HP > 0). Dictator "Jordan" is a Cosmic fan.
 const runoffFlip: MockScenario = {
   id: 'mock-runoff-flip',
   label: 'STAR Runoff Flip',
   description: "The highest-scoring game loses the runoff — majority preferred the runner-up head-to-head.",
   tally: {
-    ballotId: 0,
-    ballotName: 'STAR Runoff Demo',
-    voteCount: 7,
+    ballotId: 0, ballotName: 'STAR Runoff Demo', officialMethod: 'mj', voteCount: 7,
     mj: [
-      { id: 'terra',   name: 'Terra Mystica',     thumbnail: '', rank: 1, totalVotes: 7,
-        gradeCounts: { excellent:0, verygood:5, good:0, average:0, fair:0, poor:2 } },
-      { id: 'cosmic',  name: 'Cosmic Encounter',  thumbnail: '', rank: 2, totalVotes: 7,
-        gradeCounts: { excellent:2, verygood:0, good:5, average:0, fair:0, poor:0 } },
-      { id: 'chess',   name: 'Chess',             thumbnail: '', rank: 3, totalVotes: 7,
-        gradeCounts: { excellent:0, verygood:0, good:3, average:4, fair:0, poor:0 } },
+      { id: 'terra',  name: 'Terra Mystica',    thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(0,5,0,0,0,2) },
+      { id: 'cosmic', name: 'Cosmic Encounter', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(2,0,5,0,0,0) },
+      { id: 'chess',  name: 'Chess',            thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0,0,3,4,0,0) },
     ],
     star: [
-      // Cosmic scored 25 (2×5 + 5×3) but lost the runoff 2-5 to Terra
-      { id: 'terra',   name: 'Terra Mystica',     thumbnail: '', rank: 1, totalVotes: 7, starScore: 20, inRunoff: true,
-        gradeCounts: { excellent:0, verygood:5, good:0, average:0, fair:0, poor:2 } },
-      { id: 'cosmic',  name: 'Cosmic Encounter',  thumbnail: '', rank: 2, totalVotes: 7, starScore: 25, inRunoff: true,
-        gradeCounts: { excellent:2, verygood:0, good:5, average:0, fair:0, poor:0 } },
-      { id: 'chess',   name: 'Chess',             thumbnail: '', rank: 3, totalVotes: 7, starScore: 17,
-        gradeCounts: { excellent:0, verygood:0, good:3, average:4, fair:0, poor:0 } },
+      { id: 'terra',  name: 'Terra Mystica',    thumbnail: '', rank: 1, totalVotes: 7, starScore: 20, inRunoff: true, gradeCounts: gc(0,5,0,0,0,2) },
+      { id: 'cosmic', name: 'Cosmic Encounter', thumbnail: '', rank: 2, totalVotes: 7, starScore: 25, inRunoff: true, gradeCounts: gc(2,0,5,0,0,0) },
+      { id: 'chess',  name: 'Chess',            thumbnail: '', rank: 3, totalVotes: 7, starScore: 17,                 gradeCounts: gc(0,0,3,4,0,0) },
     ],
+    ivmj: [
+      { id: 'cosmic', name: 'Cosmic Encounter', thumbnail: '', rank: 1, totalVotes: 7,                                gradeCounts: gc(2,0,5,0,0,0) },
+      { id: 'chess',  name: 'Chess',            thumbnail: '', rank: 2, totalVotes: 7,                                gradeCounts: gc(0,0,3,4,0,0) },
+      { id: 'terra',  name: 'Terra Mystica',    thumbnail: '', rank: 3, totalVotes: 7, vetoed: true, hardPassCount: 2, gradeCounts: gc(0,5,0,0,0,2) },
+    ],
+    ivstar: [
+      { id: 'cosmic', name: 'Cosmic Encounter', thumbnail: '', rank: 1, totalVotes: 7, starScore: 25, inRunoff: true, gradeCounts: gc(2,0,5,0,0,0) },
+      { id: 'chess',  name: 'Chess',            thumbnail: '', rank: 2, totalVotes: 7, starScore: 17, inRunoff: true, gradeCounts: gc(0,0,3,4,0,0) },
+      { id: 'terra',  name: 'Terra Mystica',    thumbnail: '', rank: 3, totalVotes: 7, starScore: 20, vetoed: true, hardPassCount: 2, gradeCounts: gc(0,5,0,0,0,2) },
+    ],
+    // Borda: Terra wins (5 VG voters rank it highly; Cosmic's HP voters drag it down)
+    borda: [
+      { id: 'terra',  name: 'Terra Mystica',    thumbnail: '', rank: 1, totalVotes: 7, bordaScore: 10, gradeCounts: gc(0,5,0,0,0,2) },
+      { id: 'cosmic', name: 'Cosmic Encounter', thumbnail: '', rank: 2, totalVotes: 7, bordaScore:  9, gradeCounts: gc(2,0,5,0,0,0) },
+      { id: 'chess',  name: 'Chess',            thumbnail: '', rank: 3, totalVotes: 7, bordaScore:  5, gradeCounts: gc(0,0,3,4,0,0) },
+    ],
+    // IRV: Chess elim round 1, then Terra beats Cosmic (Terra has 5 first-choice VG voters)
+    irv: [
+      { id: 'terra',  name: 'Terra Mystica',    thumbnail: '', rank: 1, totalVotes: 7,                  gradeCounts: gc(0,5,0,0,0,2) },
+      { id: 'cosmic', name: 'Cosmic Encounter', thumbnail: '', rank: 2, totalVotes: 7, irvElimRound: 2, gradeCounts: gc(2,0,5,0,0,0) },
+      { id: 'chess',  name: 'Chess',            thumbnail: '', rank: 3, totalVotes: 7, irvElimRound: 1, gradeCounts: gc(0,0,3,4,0,0) },
+    ],
+    // Condorcet: Terra beats all head-to-head (5 VG voters prefer Terra over everyone)
+    condorcet: [
+      { id: 'terra',  name: 'Terra Mystica',    thumbnail: '', rank: 1, totalVotes: 7, pairwiseWins: 2, gradeCounts: gc(0,5,0,0,0,2) },
+      { id: 'cosmic', name: 'Cosmic Encounter', thumbnail: '', rank: 2, totalVotes: 7, pairwiseWins: 1, gradeCounts: gc(2,0,5,0,0,0) },
+      { id: 'chess',  name: 'Chess',            thumbnail: '', rank: 3, totalVotes: 7, pairwiseWins: 0, gradeCounts: gc(0,0,3,4,0,0) },
+    ],
+    condorcetParadox: false,
+    // Dictator: Jordan voted last and is a Cosmic Encounter devotee
+    dictator: [
+      { id: 'cosmic', name: 'Cosmic Encounter', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(2,0,5,0,0,0) },
+      { id: 'terra',  name: 'Terra Mystica',    thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(0,5,0,0,0,2) },
+      { id: 'chess',  name: 'Chess',            thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0,0,3,4,0,0) },
+    ],
+    dictatorName: 'Jordan',
   },
 }
 
 // ─── Scenario 6: Single Vote ──────────────────────────────────────────────────
-// Edge case: only one person has voted.
 const oneVote: MockScenario = {
   id: 'mock-onevote',
   label: 'Single Vote',
-  description: 'Only one voter so far — rankings are just that person\'s ratings.',
+  description: "Only one voter so far — rankings are just that person's ratings.",
   tally: {
-    ballotId: 0,
-    ballotName: 'Just Me So Far',
-    voteCount: 1,
+    ballotId: 0, ballotName: 'Just Me So Far', officialMethod: 'mj', voteCount: 1,
     mj: [
-      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 1,
-        gradeCounts: { excellent:1, verygood:0, good:0, average:0, fair:0, poor:0 } },
-      { id: 'catan',     name: 'Catan',     thumbnail: '', rank: 2, totalVotes: 1,
-        gradeCounts: { excellent:0, verygood:0, good:1, average:0, fair:0, poor:0 } },
-      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 1,
-        gradeCounts: { excellent:0, verygood:0, good:0, average:0, fair:1, poor:0 } },
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 1, gradeCounts: gc(1,0,0,0,0,0) },
+      { id: 'catan',     name: 'Catan',     thumbnail: '', rank: 2, totalVotes: 1, gradeCounts: gc(0,0,1,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 1, gradeCounts: gc(0,0,0,0,1,0) },
     ],
     star: [
-      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 1, starScore: 5, inRunoff: true,
-        gradeCounts: { excellent:1, verygood:0, good:0, average:0, fair:0, poor:0 } },
-      { id: 'catan',     name: 'Catan',     thumbnail: '', rank: 2, totalVotes: 1, starScore: 3, inRunoff: true,
-        gradeCounts: { excellent:0, verygood:0, good:1, average:0, fair:0, poor:0 } },
-      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 1, starScore: 1,
-        gradeCounts: { excellent:0, verygood:0, good:0, average:0, fair:1, poor:0 } },
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 1, starScore: 5, inRunoff: true, gradeCounts: gc(1,0,0,0,0,0) },
+      { id: 'catan',     name: 'Catan',     thumbnail: '', rank: 2, totalVotes: 1, starScore: 3, inRunoff: true, gradeCounts: gc(0,0,1,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 1, starScore: 1,                 gradeCounts: gc(0,0,0,0,1,0) },
     ],
+    ivmj: [
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 1, gradeCounts: gc(1,0,0,0,0,0) },
+      { id: 'catan',     name: 'Catan',     thumbnail: '', rank: 2, totalVotes: 1, gradeCounts: gc(0,0,1,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 1, gradeCounts: gc(0,0,0,0,1,0) },
+    ],
+    ivstar: [
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 1, starScore: 5, inRunoff: true, gradeCounts: gc(1,0,0,0,0,0) },
+      { id: 'catan',     name: 'Catan',     thumbnail: '', rank: 2, totalVotes: 1, starScore: 3, inRunoff: true, gradeCounts: gc(0,0,1,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 1, starScore: 1,                 gradeCounts: gc(0,0,0,0,1,0) },
+    ],
+    borda: [
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 1, bordaScore: 2, gradeCounts: gc(1,0,0,0,0,0) },
+      { id: 'catan',     name: 'Catan',     thumbnail: '', rank: 2, totalVotes: 1, bordaScore: 1, gradeCounts: gc(0,0,1,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 1, bordaScore: 0, gradeCounts: gc(0,0,0,0,1,0) },
+    ],
+    irv: [
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 1,                  gradeCounts: gc(1,0,0,0,0,0) },
+      { id: 'catan',     name: 'Catan',     thumbnail: '', rank: 2, totalVotes: 1, irvElimRound: 2, gradeCounts: gc(0,0,1,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 1, irvElimRound: 1, gradeCounts: gc(0,0,0,0,1,0) },
+    ],
+    condorcet: [
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 1, pairwiseWins: 2, gradeCounts: gc(1,0,0,0,0,0) },
+      { id: 'catan',     name: 'Catan',     thumbnail: '', rank: 2, totalVotes: 1, pairwiseWins: 1, gradeCounts: gc(0,0,1,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 1, pairwiseWins: 0, gradeCounts: gc(0,0,0,0,1,0) },
+    ],
+    condorcetParadox: false,
+    // The only voter is the dictator by default
+    dictator: [
+      { id: 'wingspan',  name: 'Wingspan',  thumbnail: '', rank: 1, totalVotes: 1, gradeCounts: gc(1,0,0,0,0,0) },
+      { id: 'catan',     name: 'Catan',     thumbnail: '', rank: 2, totalVotes: 1, gradeCounts: gc(0,0,1,0,0,0) },
+      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 1, gradeCounts: gc(0,0,0,0,1,0) },
+    ],
+    dictatorName: 'Riley',
+  },
+}
+
+// ─── Scenario 7: Veto — No Effect (Equal HP Counts) ──────────────────────────
+const vetoNodiff: MockScenario = {
+  id: 'mock-veto-nodiff',
+  label: 'Veto — No Effect',
+  description: 'Every game has the same number of Hard Passes — the veto disqualifies nobody.',
+  tally: {
+    ballotId: 0, ballotName: 'Equal Hard Passes', officialMethod: 'mj', voteCount: 5,
+    mj: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(3,1,0,0,0,1) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(0,3,1,0,0,1) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0,0,2,2,0,1) },
+    ],
+    star: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, starScore: 19, inRunoff: true, gradeCounts: gc(3,1,0,0,0,1) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 5, starScore: 15, inRunoff: true, gradeCounts: gc(0,3,1,0,0,1) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 3, totalVotes: 5, starScore: 10,                 gradeCounts: gc(0,0,2,2,0,1) },
+    ],
+    ivmj: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(3,1,0,0,0,1) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(0,3,1,0,0,1) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0,0,2,2,0,1) },
+    ],
+    ivstar: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, starScore: 19, inRunoff: true, gradeCounts: gc(3,1,0,0,0,1) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 5, starScore: 15, inRunoff: true, gradeCounts: gc(0,3,1,0,0,1) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 3, totalVotes: 5, starScore: 10,                 gradeCounts: gc(0,0,2,2,0,1) },
+    ],
+    borda: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, bordaScore: 8, gradeCounts: gc(3,1,0,0,0,1) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 5, bordaScore: 6, gradeCounts: gc(0,3,1,0,0,1) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 3, totalVotes: 5, bordaScore: 3, gradeCounts: gc(0,0,2,2,0,1) },
+    ],
+    irv: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5,                  gradeCounts: gc(3,1,0,0,0,1) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 5, irvElimRound: 2, gradeCounts: gc(0,3,1,0,0,1) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 3, totalVotes: 5, irvElimRound: 1, gradeCounts: gc(0,0,2,2,0,1) },
+    ],
+    condorcet: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, pairwiseWins: 2, gradeCounts: gc(3,1,0,0,0,1) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 5, pairwiseWins: 1, gradeCounts: gc(0,3,1,0,0,1) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 3, totalVotes: 5, pairwiseWins: 0, gradeCounts: gc(0,0,2,2,0,1) },
+    ],
+    condorcetParadox: false,
+    dictator: [
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(0,3,1,0,0,1) },
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(3,1,0,0,0,1) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0,0,2,2,0,1) },
+    ],
+    dictatorName: 'Sam',
+  },
+}
+
+// ─── Scenario 8: Veto — One Survivor ─────────────────────────────────────────
+const vetoOneSurvivor: MockScenario = {
+  id: 'mock-veto-onesurvivor',
+  label: 'Veto — One Survivor',
+  description: 'Only one game escapes the veto — it wins both IV methods by default.',
+  tally: {
+    ballotId: 0, ballotName: 'Mass Disqualification', officialMethod: 'mj', voteCount: 6,
+    mj: [
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 1, totalVotes: 6, gradeCounts: gc(4,0,0,0,0,2) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 2, totalVotes: 6, gradeCounts: gc(3,0,0,0,0,3) },
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 6, gradeCounts: gc(2,4,0,0,0,0) },
+    ],
+    star: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 6, starScore: 26, inRunoff: true, gradeCounts: gc(2,4,0,0,0,0) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 6, starScore: 20, inRunoff: true, gradeCounts: gc(4,0,0,0,0,2) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 3, totalVotes: 6, starScore: 15,                 gradeCounts: gc(3,0,0,0,0,3) },
+    ],
+    ivmj: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 6,                                gradeCounts: gc(2,4,0,0,0,0) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 6, vetoed: true, hardPassCount: 2, gradeCounts: gc(4,0,0,0,0,2) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 3, totalVotes: 6, vetoed: true, hardPassCount: 3, gradeCounts: gc(3,0,0,0,0,3) },
+    ],
+    ivstar: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 6, starScore: 26, inRunoff: true, gradeCounts: gc(2,4,0,0,0,0) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 6, starScore: 20, vetoed: true, hardPassCount: 2, gradeCounts: gc(4,0,0,0,0,2) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 3, totalVotes: 6, starScore: 15, vetoed: true, hardPassCount: 3, gradeCounts: gc(3,0,0,0,0,3) },
+    ],
+    borda: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 6, bordaScore: 10, gradeCounts: gc(2,4,0,0,0,0) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 6, bordaScore:  8, gradeCounts: gc(4,0,0,0,0,2) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 3, totalVotes: 6, bordaScore:  6, gradeCounts: gc(3,0,0,0,0,3) },
+    ],
+    irv: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 6,                  gradeCounts: gc(2,4,0,0,0,0) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 6, irvElimRound: 2, gradeCounts: gc(4,0,0,0,0,2) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 3, totalVotes: 6, irvElimRound: 1, gradeCounts: gc(3,0,0,0,0,3) },
+    ],
+    condorcet: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 6, pairwiseWins: 2, gradeCounts: gc(2,4,0,0,0,0) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 6, pairwiseWins: 1, gradeCounts: gc(4,0,0,0,0,2) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 3, totalVotes: 6, pairwiseWins: 0, gradeCounts: gc(3,0,0,0,0,3) },
+    ],
+    condorcetParadox: false,
+    dictator: [
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 1, totalVotes: 6, gradeCounts: gc(4,0,0,0,0,2) },
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 2, totalVotes: 6, gradeCounts: gc(2,4,0,0,0,0) },
+      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 3, totalVotes: 6, gradeCounts: gc(3,0,0,0,0,3) },
+    ],
+    dictatorName: 'Alex',
+  },
+}
+
+// ─── Scenario 9: Veto — Changes Winner ────────────────────────────────────────
+const vetoChangesWinner: MockScenario = {
+  id: 'mock-veto-changes-winner',
+  label: 'Veto — Changes Winner',
+  description: 'The top-rated game has one Hard Pass — the veto knocks it out and the runner-up wins.',
+  tally: {
+    ballotId: 0, ballotName: 'One Dissenting Vote', officialMethod: 'mj', voteCount: 5,
+    mj: [
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(4,0,0,0,0,1) },
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(2,3,0,0,0,0) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0,2,3,0,0,0) },
+    ],
+    star: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, starScore: 22, inRunoff: true, gradeCounts: gc(2,3,0,0,0,0) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 5, starScore: 20, inRunoff: true, gradeCounts: gc(4,0,0,0,0,1) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 3, totalVotes: 5, starScore: 17,                 gradeCounts: gc(0,2,3,0,0,0) },
+    ],
+    ivmj: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5,                                gradeCounts: gc(2,3,0,0,0,0) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 2, totalVotes: 5,                                gradeCounts: gc(0,2,3,0,0,0) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 3, totalVotes: 5, vetoed: true, hardPassCount: 1, gradeCounts: gc(4,0,0,0,0,1) },
+    ],
+    ivstar: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, starScore: 22, inRunoff: true, gradeCounts: gc(2,3,0,0,0,0) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 2, totalVotes: 5, starScore: 17, inRunoff: true, gradeCounts: gc(0,2,3,0,0,0) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 3, totalVotes: 5, starScore: 20, vetoed: true, hardPassCount: 1, gradeCounts: gc(4,0,0,0,0,1) },
+    ],
+    borda: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, bordaScore: 8, gradeCounts: gc(2,3,0,0,0,0) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 5, bordaScore: 7, gradeCounts: gc(4,0,0,0,0,1) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 3, totalVotes: 5, bordaScore: 5, gradeCounts: gc(0,2,3,0,0,0) },
+    ],
+    irv: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5,                  gradeCounts: gc(2,3,0,0,0,0) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 5, irvElimRound: 2, gradeCounts: gc(4,0,0,0,0,1) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 3, totalVotes: 5, irvElimRound: 1, gradeCounts: gc(0,2,3,0,0,0) },
+    ],
+    condorcet: [
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, pairwiseWins: 2, gradeCounts: gc(2,3,0,0,0,0) },
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 2, totalVotes: 5, pairwiseWins: 1, gradeCounts: gc(4,0,0,0,0,1) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 3, totalVotes: 5, pairwiseWins: 0, gradeCounts: gc(0,2,3,0,0,0) },
+    ],
+    condorcetParadox: false,
+    dictator: [
+      { id: 'catan',    name: 'Catan',    thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(4,0,0,0,0,1) },
+      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(2,3,0,0,0,0) },
+      { id: 'azul',     name: 'Azul',     thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0,2,3,0,0,0) },
+    ],
+    dictatorName: 'Sam',
+  },
+}
+
+// ─── Scenario 10: All Four IV Methods Disagree ────────────────────────────────
+const allFourDiffer: MockScenario = {
+  id: 'mock-all-four-differ',
+  label: 'All Four Disagree',
+  description: 'Constructed so every method — MJ, STAR, IV-MJ, IV-STAR — picks a different winner.',
+  tally: {
+    ballotId: 0, ballotName: 'Maximum Disagreement', officialMethod: 'mj', voteCount: 7,
+    mj: [
+      { id: 'azul',  name: 'Azul',              thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(4,0,0,0,0,3) },
+      { id: 'brass', name: 'Brass Birmingham',  thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(3,3,0,0,0,1) },
+      { id: 'catan', name: 'Catan',             thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0,4,3,0,0,0) },
+      { id: 'dom',   name: 'Dominion',          thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(2,1,4,0,0,0) },
+    ],
+    star: [
+      { id: 'brass', name: 'Brass Birmingham',  thumbnail: '', rank: 1, totalVotes: 7, starScore: 27, inRunoff: true, gradeCounts: gc(3,3,0,0,0,1) },
+      { id: 'dom',   name: 'Dominion',          thumbnail: '', rank: 2, totalVotes: 7, starScore: 26, inRunoff: true, gradeCounts: gc(2,1,4,0,0,0) },
+      { id: 'catan', name: 'Catan',             thumbnail: '', rank: 3, totalVotes: 7, starScore: 25,                 gradeCounts: gc(0,4,3,0,0,0) },
+      { id: 'azul',  name: 'Azul',              thumbnail: '', rank: 4, totalVotes: 7, starScore: 20,                 gradeCounts: gc(4,0,0,0,0,3) },
+    ],
+    ivmj: [
+      { id: 'catan', name: 'Catan',             thumbnail: '', rank: 1, totalVotes: 7,                                gradeCounts: gc(0,4,3,0,0,0) },
+      { id: 'dom',   name: 'Dominion',          thumbnail: '', rank: 2, totalVotes: 7,                                gradeCounts: gc(2,1,4,0,0,0) },
+      { id: 'brass', name: 'Brass Birmingham',  thumbnail: '', rank: 3, totalVotes: 7, vetoed: true, hardPassCount: 1, gradeCounts: gc(3,3,0,0,0,1) },
+      { id: 'azul',  name: 'Azul',              thumbnail: '', rank: 4, totalVotes: 7, vetoed: true, hardPassCount: 3, gradeCounts: gc(4,0,0,0,0,3) },
+    ],
+    ivstar: [
+      { id: 'dom',   name: 'Dominion',          thumbnail: '', rank: 1, totalVotes: 7, starScore: 26, inRunoff: true, gradeCounts: gc(2,1,4,0,0,0) },
+      { id: 'catan', name: 'Catan',             thumbnail: '', rank: 2, totalVotes: 7, starScore: 25, inRunoff: true, gradeCounts: gc(0,4,3,0,0,0) },
+      { id: 'brass', name: 'Brass Birmingham',  thumbnail: '', rank: 3, totalVotes: 7, starScore: 27, vetoed: true, hardPassCount: 1, gradeCounts: gc(3,3,0,0,0,1) },
+      { id: 'azul',  name: 'Azul',              thumbnail: '', rank: 4, totalVotes: 7, starScore: 20, vetoed: true, hardPassCount: 3, gradeCounts: gc(4,0,0,0,0,3) },
+    ],
+    // Borda: Brass wins (consistent E+VG, only 1 HP)
+    borda: [
+      { id: 'brass', name: 'Brass Birmingham',  thumbnail: '', rank: 1, totalVotes: 7, bordaScore: 15, gradeCounts: gc(3,3,0,0,0,1) },
+      { id: 'dom',   name: 'Dominion',          thumbnail: '', rank: 2, totalVotes: 7, bordaScore: 14, gradeCounts: gc(2,1,4,0,0,0) },
+      { id: 'catan', name: 'Catan',             thumbnail: '', rank: 3, totalVotes: 7, bordaScore: 12, gradeCounts: gc(0,4,3,0,0,0) },
+      { id: 'azul',  name: 'Azul',              thumbnail: '', rank: 4, totalVotes: 7, bordaScore:  9, gradeCounts: gc(4,0,0,0,0,3) },
+    ],
+    // IRV: Catan eliminated first (0 first-choice E votes among non-Azul, non-Brass voters)
+    // then Dom, then Azul, Brass wins
+    irv: [
+      { id: 'brass', name: 'Brass Birmingham',  thumbnail: '', rank: 1, totalVotes: 7,                  gradeCounts: gc(3,3,0,0,0,1) },
+      { id: 'azul',  name: 'Azul',              thumbnail: '', rank: 2, totalVotes: 7, irvElimRound: 3, gradeCounts: gc(4,0,0,0,0,3) },
+      { id: 'dom',   name: 'Dominion',          thumbnail: '', rank: 3, totalVotes: 7, irvElimRound: 2, gradeCounts: gc(2,1,4,0,0,0) },
+      { id: 'catan', name: 'Catan',             thumbnail: '', rank: 4, totalVotes: 7, irvElimRound: 1, gradeCounts: gc(0,4,3,0,0,0) },
+    ],
+    // Condorcet: Brass beats all (3E+3VG beats most in head-to-head)
+    condorcet: [
+      { id: 'brass', name: 'Brass Birmingham',  thumbnail: '', rank: 1, totalVotes: 7, pairwiseWins: 3, gradeCounts: gc(3,3,0,0,0,1) },
+      { id: 'catan', name: 'Catan',             thumbnail: '', rank: 2, totalVotes: 7, pairwiseWins: 2, gradeCounts: gc(0,4,3,0,0,0) },
+      { id: 'dom',   name: 'Dominion',          thumbnail: '', rank: 3, totalVotes: 7, pairwiseWins: 1, gradeCounts: gc(2,1,4,0,0,0) },
+      { id: 'azul',  name: 'Azul',              thumbnail: '', rank: 4, totalVotes: 7, pairwiseWins: 0, gradeCounts: gc(4,0,0,0,0,3) },
+    ],
+    condorcetParadox: false,
+    // Dictator: Sam voted last and picks Dominion
+    dictator: [
+      { id: 'dom',   name: 'Dominion',         thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(2,1,4,0,0,0) },
+      { id: 'brass', name: 'Brass Birmingham', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(3,3,0,0,0,1) },
+      { id: 'catan', name: 'Catan',            thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0,4,3,0,0,0) },
+      { id: 'azul',  name: 'Azul',             thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(4,0,0,0,0,3) },
+    ],
+    dictatorName: 'Sam',
+  },
+}
+
+// ─── Scenario 11: Condorcet Paradox (asymmetric) ─────────────────────────────
+// 7 voters, 3 candidates — a genuine cycle where grades differ between candidates.
+//   Group A (3 voters): Azul=E, Brass=VG, Catan=Avg  →  Azul > Brass > Catan
+//   Group B (3 voters): Brass=E, Catan=VG, Azul=Good →  Brass > Catan > Azul
+//   Group C (1 voter):  Catan=E, Azul=VG,  Brass=Good → Catan > Azul > Brass
+//
+// Pairwise head-to-head:
+//   Azul  beats Brass  4-3 (groups A+C prefer Azul)
+//   Brass beats Catan  6-1 (groups A+B prefer Brass)
+//   Catan beats Azul   4-3 (groups B+C prefer Catan)
+// → Azul > Brass > Catan > Azul: genuine cycle, no Condorcet winner.
+//
+// Other methods split: MJ/Borda pick Brass (consistent highs), STAR/IRV pick Azul
+// (runoff flip from Brass). Dictator (lone Catan fan, "Morgan") picks Catan.
+const condorcetCycle: MockScenario = {
+  id: 'mock-condorcet-cycle',
+  label: 'Condorcet Cycle',
+  description: 'Azul>Brass>Catan>Azul — a real cycle with different grades per candidate, not just a perfect tie.',
+  tally: {
+    ballotId: 0, ballotName: 'Rock Paper Scissors', officialMethod: 'mj', voteCount: 7,
+    // Grade distributions:
+    //   Azul:  3E (grpA) + 1VG (grpC) + 3Good (grpB) → gc(3,1,3,0,0,0)
+    //   Brass: 3VG (grpA) + 3E (grpB) + 1Good (grpC) → gc(3,3,1,0,0,0)
+    //   Catan: 3E→Avg (grpA) + 3VG (grpB) + 1E (grpC) → gc(1,3,0,3,0,0)
+    // MJ medians: Azul=VG (lean neutral), Brass=VG (lean up) → Brass wins MJ
+    mj: [
+      { id: 'brass', name: 'Brass Birmingham', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3,3,1,0,0,0) },
+      { id: 'azul',  name: 'Azul',             thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(3,1,3,0,0,0) },
+      { id: 'catan', name: 'Catan',            thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(1,3,0,3,0,0) },
+    ],
+    // STAR scores: Brass=30, Azul=28, Catan=23. Top 2: Brass/Azul.
+    // Runoff: grpA(3) prefer Azul(E>VG), grpB(3) prefer Brass(E>Good), grpC(1) prefer Azul(VG>Good)
+    // Azul wins runoff 4-3. STAR: Azul wins.
+    star: [
+      { id: 'azul',  name: 'Azul',             thumbnail: '', rank: 1, totalVotes: 7, starScore: 28, inRunoff: true, gradeCounts: gc(3,1,3,0,0,0) },
+      { id: 'brass', name: 'Brass Birmingham', thumbnail: '', rank: 2, totalVotes: 7, starScore: 30, inRunoff: true, gradeCounts: gc(3,3,1,0,0,0) },
+      { id: 'catan', name: 'Catan',            thumbnail: '', rank: 3, totalVotes: 7, starScore: 23,                 gradeCounts: gc(1,3,0,3,0,0) },
+    ],
+    // No Hard Passes in any camp → no vetoes. IV = base method.
+    ivmj: [
+      { id: 'brass', name: 'Brass Birmingham', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3,3,1,0,0,0) },
+      { id: 'azul',  name: 'Azul',             thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(3,1,3,0,0,0) },
+      { id: 'catan', name: 'Catan',            thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(1,3,0,3,0,0) },
+    ],
+    ivstar: [
+      { id: 'azul',  name: 'Azul',             thumbnail: '', rank: 1, totalVotes: 7, starScore: 28, inRunoff: true, gradeCounts: gc(3,1,3,0,0,0) },
+      { id: 'brass', name: 'Brass Birmingham', thumbnail: '', rank: 2, totalVotes: 7, starScore: 30, inRunoff: true, gradeCounts: gc(3,3,1,0,0,0) },
+      { id: 'catan', name: 'Catan',            thumbnail: '', rank: 3, totalVotes: 7, starScore: 23,                 gradeCounts: gc(1,3,0,3,0,0) },
+    ],
+    // Borda: Brass=9, Azul=7, Catan=5
+    borda: [
+      { id: 'brass', name: 'Brass Birmingham', thumbnail: '', rank: 1, totalVotes: 7, bordaScore: 9, gradeCounts: gc(3,3,1,0,0,0) },
+      { id: 'azul',  name: 'Azul',             thumbnail: '', rank: 2, totalVotes: 7, bordaScore: 7, gradeCounts: gc(3,1,3,0,0,0) },
+      { id: 'catan', name: 'Catan',            thumbnail: '', rank: 3, totalVotes: 7, bordaScore: 5, gradeCounts: gc(1,3,0,3,0,0) },
+    ],
+    // IRV: Catan elim round 1 (1 vote → Azul). Round 2: Azul=4, Brass=3. Azul wins.
+    irv: [
+      { id: 'azul',  name: 'Azul',             thumbnail: '', rank: 1, totalVotes: 7,                  gradeCounts: gc(3,1,3,0,0,0) },
+      { id: 'brass', name: 'Brass Birmingham', thumbnail: '', rank: 2, totalVotes: 7, irvElimRound: 2, gradeCounts: gc(3,3,1,0,0,0) },
+      { id: 'catan', name: 'Catan',            thumbnail: '', rank: 3, totalVotes: 7, irvElimRound: 1, gradeCounts: gc(1,3,0,3,0,0) },
+    ],
+    // Condorcet: each candidate has 1 pairwise win. Cycle! hasParadox = true.
+    condorcet: [
+      { id: 'azul',  name: 'Azul',             thumbnail: '', rank: 1, totalVotes: 7, pairwiseWins: 1, gradeCounts: gc(3,1,3,0,0,0) },
+      { id: 'brass', name: 'Brass Birmingham', thumbnail: '', rank: 1, totalVotes: 7, pairwiseWins: 1, gradeCounts: gc(3,3,1,0,0,0) },
+      { id: 'catan', name: 'Catan',            thumbnail: '', rank: 1, totalVotes: 7, pairwiseWins: 1, gradeCounts: gc(1,3,0,3,0,0) },
+    ],
+    condorcetParadox: true,
+    // Dictator: Morgan (the lone Group C voter, last to vote) picks Catan
+    dictator: [
+      { id: 'catan', name: 'Catan',            thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(1,3,0,3,0,0) },
+      { id: 'azul',  name: 'Azul',             thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(3,1,3,0,0,0) },
+      { id: 'brass', name: 'Brass Birmingham', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(3,3,1,0,0,0) },
+    ],
+    dictatorName: 'Morgan',
+  },
+}
+
+// ─── Scenario 12: Tennessee Capital (Condorcet vs IRV) ───────────────────────
+// Classic political science example, adapted with board games as city names.
+// 20 voters split into 4 regional camps:
+//   Memphis   fans (8): Memphis=E, Nashville=VG, Chattanooga=Good, Knoxville=P
+//   Nashville fans (5): Nashville=E, Chattanooga=VG, Knoxville=Good, Memphis=P
+//   Chattanooga fans (3): Chattanooga=E, Knoxville=VG, Nashville=Good, Memphis=P
+//   Knoxville fans (4): Knoxville=E, Chattanooga=VG, Nashville=Good, Memphis=P
+//
+// Key results:
+//   Memphis has the plurality (8/20 = 40%) but loses every head-to-head.
+//   Nashville is the Condorcet winner (beats all others pairwise).
+//   IRV: Chattanooga eliminated → Knoxville; Nashville eliminated → Knoxville.
+//   Knoxville wins IRV despite Nashville being the true consensus pick!
+//   Implicit Veto knocks out Memphis AND Knoxville (both have Hard Passes).
+const tennessee: MockScenario = {
+  id: 'mock-tennessee',
+  label: 'Tennessee Capital',
+  description: 'Memphis has plurality but Nashville wins everything else — except IRV, which picks Knoxville.',
+  tally: {
+    ballotId: 0, ballotName: 'Tennessee Board Game Championship', officialMethod: 'mj', voteCount: 20,
+    // Grade distributions (20 voters):
+    //   Memphis:     E=8(Mem), P=12(Nash+Chat+Knox)      → gc(8,0,0,0,0,12)
+    //   Nashville:   E=5(Nash), VG=8(Mem), Good=7(C+K)  → gc(5,8,7,0,0,0)
+    //   Chattanooga: E=3(Chat), VG=9(Nash+Knox), Good=8(Mem) → gc(3,9,8,0,0,0)
+    //   Knoxville:   E=4(Knox), VG=3(Chat), Good=5(Nash), P=8(Mem) → gc(4,3,5,0,0,8)
+    // MJ medians: Nashville=VG, Chattanooga=VG, Knoxville=Good, Memphis=P(Hard Pass)
+    // Nashville lean: above=5, below=7. Chat lean: above=3, below=8. Nashville wins.
+    mj: [
+      { id: 'nash', name: 'Nashville',   thumbnail: '', rank: 1, totalVotes: 20, gradeCounts: gc(5,8,7,0,0,0) },
+      { id: 'chat', name: 'Chattanooga', thumbnail: '', rank: 2, totalVotes: 20, gradeCounts: gc(3,9,8,0,0,0) },
+      { id: 'knox', name: 'Knoxville',   thumbnail: '', rank: 3, totalVotes: 20, gradeCounts: gc(4,3,5,0,0,8) },
+      { id: 'mem',  name: 'Memphis',     thumbnail: '', rank: 4, totalVotes: 20, gradeCounts: gc(8,0,0,0,0,12) },
+    ],
+    // STAR scores: Nashville=78, Chattanooga=75, Knoxville=47, Memphis=40
+    // Runoff Nashville vs Chattanooga: Mem(8)+Nash(5)=13 prefer Nash, Chat(3)+Knox(4)=7 prefer Chat
+    star: [
+      { id: 'nash', name: 'Nashville',   thumbnail: '', rank: 1, totalVotes: 20, starScore: 78, inRunoff: true, gradeCounts: gc(5,8,7,0,0,0) },
+      { id: 'chat', name: 'Chattanooga', thumbnail: '', rank: 2, totalVotes: 20, starScore: 75, inRunoff: true, gradeCounts: gc(3,9,8,0,0,0) },
+      { id: 'knox', name: 'Knoxville',   thumbnail: '', rank: 3, totalVotes: 20, starScore: 47,                 gradeCounts: gc(4,3,5,0,0,8) },
+      { id: 'mem',  name: 'Memphis',     thumbnail: '', rank: 4, totalVotes: 20, starScore: 40,                 gradeCounts: gc(8,0,0,0,0,12) },
+    ],
+    // IV: Memphis has 12 HP, Knoxville has 8 HP. Min HP = 0 (Nash, Chat). Both vetoed.
+    ivmj: [
+      { id: 'nash', name: 'Nashville',   thumbnail: '', rank: 1, totalVotes: 20, gradeCounts: gc(5,8,7,0,0,0) },
+      { id: 'chat', name: 'Chattanooga', thumbnail: '', rank: 2, totalVotes: 20, gradeCounts: gc(3,9,8,0,0,0) },
+      { id: 'knox', name: 'Knoxville',   thumbnail: '', rank: 3, totalVotes: 20, vetoed: true, hardPassCount: 8,  gradeCounts: gc(4,3,5,0,0,8) },
+      { id: 'mem',  name: 'Memphis',     thumbnail: '', rank: 4, totalVotes: 20, vetoed: true, hardPassCount: 12, gradeCounts: gc(8,0,0,0,0,12) },
+    ],
+    ivstar: [
+      { id: 'nash', name: 'Nashville',   thumbnail: '', rank: 1, totalVotes: 20, starScore: 78, inRunoff: true, gradeCounts: gc(5,8,7,0,0,0) },
+      { id: 'chat', name: 'Chattanooga', thumbnail: '', rank: 2, totalVotes: 20, starScore: 75, inRunoff: true, gradeCounts: gc(3,9,8,0,0,0) },
+      { id: 'knox', name: 'Knoxville',   thumbnail: '', rank: 3, totalVotes: 20, starScore: 47, vetoed: true, hardPassCount: 8,  gradeCounts: gc(4,3,5,0,0,8) },
+      { id: 'mem',  name: 'Memphis',     thumbnail: '', rank: 4, totalVotes: 20, starScore: 40, vetoed: true, hardPassCount: 12, gradeCounts: gc(8,0,0,0,0,12) },
+    ],
+    // Borda: Nash=38, Chat=35, Memphis=24, Knox=23
+    borda: [
+      { id: 'nash', name: 'Nashville',   thumbnail: '', rank: 1, totalVotes: 20, bordaScore: 38, gradeCounts: gc(5,8,7,0,0,0) },
+      { id: 'chat', name: 'Chattanooga', thumbnail: '', rank: 2, totalVotes: 20, bordaScore: 35, gradeCounts: gc(3,9,8,0,0,0) },
+      { id: 'mem',  name: 'Memphis',     thumbnail: '', rank: 3, totalVotes: 20, bordaScore: 24, gradeCounts: gc(8,0,0,0,0,12) },
+      { id: 'knox', name: 'Knoxville',   thumbnail: '', rank: 4, totalVotes: 20, bordaScore: 23, gradeCounts: gc(4,3,5,0,0,8) },
+    ],
+    // IRV: Chat(3) eliminated → Knox. Nash(5) eliminated → Knox. Memphis vs Knox: Knox wins 12-8!
+    irv: [
+      { id: 'knox', name: 'Knoxville',   thumbnail: '', rank: 1, totalVotes: 20,                  gradeCounts: gc(4,3,5,0,0,8) },
+      { id: 'mem',  name: 'Memphis',     thumbnail: '', rank: 2, totalVotes: 20, irvElimRound: 3, gradeCounts: gc(8,0,0,0,0,12) },
+      { id: 'nash', name: 'Nashville',   thumbnail: '', rank: 3, totalVotes: 20, irvElimRound: 2, gradeCounts: gc(5,8,7,0,0,0) },
+      { id: 'chat', name: 'Chattanooga', thumbnail: '', rank: 4, totalVotes: 20, irvElimRound: 1, gradeCounts: gc(3,9,8,0,0,0) },
+    ],
+    // Condorcet: Nashville beats all (58% prefer Nash over Memphis, 65% over Chat/Knox)
+    //   Nash: 3 wins. Chat: 2 wins. Knox: 1 win. Memphis: 0 wins.
+    condorcet: [
+      { id: 'nash', name: 'Nashville',   thumbnail: '', rank: 1, totalVotes: 20, pairwiseWins: 3, gradeCounts: gc(5,8,7,0,0,0) },
+      { id: 'chat', name: 'Chattanooga', thumbnail: '', rank: 2, totalVotes: 20, pairwiseWins: 2, gradeCounts: gc(3,9,8,0,0,0) },
+      { id: 'knox', name: 'Knoxville',   thumbnail: '', rank: 3, totalVotes: 20, pairwiseWins: 1, gradeCounts: gc(4,3,5,0,0,8) },
+      { id: 'mem',  name: 'Memphis',     thumbnail: '', rank: 4, totalVotes: 20, pairwiseWins: 0, gradeCounts: gc(8,0,0,0,0,12) },
+    ],
+    condorcetParadox: false,
+    // Dictator: Kyle voted last — a Knoxville fan
+    dictator: [
+      { id: 'knox', name: 'Knoxville',   thumbnail: '', rank: 1, totalVotes: 20, gradeCounts: gc(4,3,5,0,0,8) },
+      { id: 'chat', name: 'Chattanooga', thumbnail: '', rank: 2, totalVotes: 20, gradeCounts: gc(3,9,8,0,0,0) },
+      { id: 'nash', name: 'Nashville',   thumbnail: '', rank: 3, totalVotes: 20, gradeCounts: gc(5,8,7,0,0,0) },
+      { id: 'mem',  name: 'Memphis',     thumbnail: '', rank: 4, totalVotes: 20, gradeCounts: gc(8,0,0,0,0,12) },
+    ],
+    dictatorName: 'Kyle',
   },
 }
 
 export const MOCK_SCENARIOS: MockScenario[] = [
   diverge, agree, noVotes, tie, runoffFlip, oneVote,
+  vetoNodiff, vetoOneSurvivor, vetoChangesWinner, allFourDiffer,
+  condorcetCycle, tennessee,
 ]
 
 export function getMockScenario(id: string): MockScenario | undefined {

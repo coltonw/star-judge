@@ -12,15 +12,19 @@ const candidateSchema = z.object({
   thumbnail: z.string(),
 })
 
+const votingMethodSchema = z.enum(['mj', 'ivmj', 'star', 'ivstar', 'borda', 'irv', 'condorcet', 'dictator'])
+
 const createBallotSchema = z.object({
   name: z.string().min(1),
   candidates: z.array(candidateSchema).min(1),
+  officialMethod: votingMethodSchema.default('mj'),
 })
 
 const updateBallotSchema = z.object({
   name: z.string().min(1),
   candidates: z.array(candidateSchema).min(1),
   active: z.boolean(),
+  officialMethod: votingMethodSchema.default('mj'),
 })
 
 // GET /api/ballots — list all (admin)
@@ -46,16 +50,16 @@ ballotsRouter.get('/:id', async (c) => {
 
 // POST /api/admin/ballots — create (admin only)
 ballotsRouter.post('/', zValidator('json', createBallotSchema), async (c) => {
-  const { name, candidates } = c.req.valid('json')
-  const ballot = await createBallot(c.env.DB, name, candidates)
+  const { name, candidates, officialMethod } = c.req.valid('json')
+  const ballot = await createBallot(c.env.DB, name, candidates, officialMethod)
   return c.json(ballot, 201)
 })
 
 // PATCH /api/admin/ballots/:id — update (admin only)
 ballotsRouter.patch('/:id', zValidator('json', updateBallotSchema), async (c) => {
   const id = parseInt(c.req.param('id'), 10)
-  const { name, candidates, active } = c.req.valid('json')
-  const ballot = await updateBallot(c.env.DB, id, name, candidates, active)
+  const { name, candidates, active, officialMethod } = c.req.valid('json')
+  const ballot = await updateBallot(c.env.DB, id, name, candidates, active, officialMethod)
   if (!ballot) return c.json({ error: 'Not found' }, 404)
   return c.json(ballot)
 })

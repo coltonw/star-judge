@@ -4,14 +4,16 @@
   import { goto } from '$app/navigation'
   import { getBallot, updateBallot, ApiError } from '$lib/api'
   import GamePicker from '$lib/components/GamePicker.svelte'
-  import type { Ballot, Candidate } from '$lib/types'
+  import type { Ballot, Candidate, VotingMethodKey } from '$lib/types'
+  import { VOTING_METHOD_LABELS } from '$lib/types'
 
-  const ballotId = $derived(parseInt(page.params.id, 10))
+  const ballotId = $derived(parseInt(page.params.id ?? '', 10))
 
   let ballot = $state<Ballot | null>(null)
   let name = $state('')
   let selectedGames = $state<Candidate[]>([])
   let active = $state(true)
+  let officialMethod = $state<VotingMethodKey>('mj')
   let loading = $state(true)
   let submitting = $state(false)
   let error = $state('')
@@ -22,6 +24,7 @@
       name = ballot.name
       selectedGames = ballot.candidates
       active = ballot.active
+      officialMethod = ballot.officialMethod ?? 'mj'
     } catch (e) {
       error = e instanceof ApiError ? e.message : 'Failed to load ballot.'
     } finally {
@@ -34,7 +37,7 @@
     submitting = true
     error = ''
     try {
-      await updateBallot(ballotId, name.trim(), selectedGames, active)
+      await updateBallot(ballotId, name.trim(), selectedGames, active, officialMethod)
       goto('/admin')
     } catch (e) {
       error = e instanceof ApiError ? e.message : 'Failed to update ballot.'
@@ -71,6 +74,16 @@
     </div>
 
     <div class="field">
+      <label for="official-method">Official voting method</label>
+      <select id="official-method" bind:value={officialMethod}>
+        {#each Object.entries(VOTING_METHOD_LABELS) as [key, label]}
+          <option value={key}>{label}</option>
+        {/each}
+      </select>
+      <p class="field-hint">Shown first and highlighted on the results page.</p>
+    </div>
+
+    <div class="field">
       <label>Games</label>
       <GamePicker bind:selected={selectedGames} />
     </div>
@@ -96,6 +109,7 @@
 <style>
   .muted { color: var(--text-muted); }
   .actions { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; }
+  .field-hint { font-size: .8rem; color: var(--text-muted); margin-top: .3rem; }
 
   .check-row { margin-bottom: 1rem; }
 
