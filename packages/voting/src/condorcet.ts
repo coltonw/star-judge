@@ -1,4 +1,4 @@
-import { type Candidate, GRADE_VALUES, GRADES, type Grade, type RankedCandidate, type Vote } from '../db/types';
+import { type Candidate, GRADE_VALUES, GRADES, type Grade, type RankedCandidate, type Vote } from '@star-judge/shared';
 
 // Condorcet method.
 //

@@ -1,10 +1,10 @@
 <script lang="ts">
+import type { RankedCandidate, TallyResponse } from '@star-judge/shared';
 import { onMount } from 'svelte';
 import { page } from '$app/state';
 import { ApiError, checkVoted, getSessionId, getTally } from '$lib/api';
 import TallyChart from '$lib/components/TallyChart.svelte';
 import { getMockScenario } from '$lib/mock-scenarios';
-import type { RankedCandidate, TallyResponse } from '$lib/types';
 
 const isMock = $derived(Number.isNaN(parseInt(page.params.id ?? '', 10)));
 const ballotId = $derived(isMock ? 0 : parseInt(page.params.id ?? '', 10));

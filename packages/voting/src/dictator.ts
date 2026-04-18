@@ -1,4 +1,4 @@
-import { type Candidate, GRADE_VALUES, GRADES, type Grade, type RankedCandidate, type Vote } from '../db/types';
+import { type Candidate, GRADE_VALUES, GRADES, type Grade, type RankedCandidate, type Vote } from '@star-judge/shared';
 
 // Dictator method: the last person to vote decides everything.
 // Their ratings are used as the sole ranking criterion.

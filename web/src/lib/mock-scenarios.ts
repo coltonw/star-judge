@@ -1,4 +1,4 @@
-import type { TallyResponse } from './types';
+import type { TallyResponse } from '@star-judge/shared';
 
 export interface MockScenario {
   id: string;

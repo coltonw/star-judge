@@ -1,5 +1,6 @@
+import type { Candidate } from '@star-judge/shared';
 import { Hono } from 'hono';
-import type { Bindings, Candidate } from '../db/types';
+import type { Bindings } from '../env';
 
 export const bggRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -65,6 +66,10 @@ bggRouter.get('/collection', async (c) => {
 
   const xml = await response.text();
   const candidates = parseXmlCollection(xml);
+
+  // BGG is slow (multi-second 202 retries). A BGG collection barely changes, so
+  // an hour of edge caching is safe and dramatically improves UX.
+  c.header('Cache-Control', 'public, max-age=3600, s-maxage=3600');
 
   return c.json({ candidates });
 });

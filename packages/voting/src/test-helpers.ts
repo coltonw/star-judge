@@ -1,4 +1,4 @@
-import type { Candidate, Grade, Vote } from '../db/types';
+import type { Candidate, Grade, Vote } from '@star-judge/shared';
 
 let _seq = 0;
 

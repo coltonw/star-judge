@@ -1,4 +1,4 @@
-import { type Candidate, GRADES, type Grade, type RankedCandidate, type Vote } from '../db/types';
+import { type Candidate, GRADES, type Grade, type RankedCandidate, type Vote } from '@star-judge/shared';
 
 function buildGradeCounts(candidates: Candidate[], votes: Vote[]): Record<string, Record<Grade, number>> {
   const counts: Record<string, Record<Grade, number>> = {};

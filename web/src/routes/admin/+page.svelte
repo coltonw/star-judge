@@ -1,7 +1,7 @@
 <script lang="ts">
+import type { Ballot } from '@star-judge/shared';
 import { onMount } from 'svelte';
 import { ApiError, deleteBallot, getBallots, updateBallot } from '$lib/api';
-import type { Ballot } from '$lib/types';
 
 let ballots = $state<Ballot[]>([]);
 let loading = $state(true);

@@ -1,8 +1,8 @@
 <script lang="ts">
+import type { Ballot } from '@star-judge/shared';
 import { onMount } from 'svelte';
 import { ApiError, checkVoted, getActiveBallot, getSessionId } from '$lib/api';
 import { MOCK_SCENARIOS } from '$lib/mock-scenarios';
-import type { Ballot } from '$lib/types';
 
 const isDev = import.meta.env.DEV;
 

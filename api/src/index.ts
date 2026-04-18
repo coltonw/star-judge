@@ -2,14 +2,16 @@ import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import type { Bindings } from './db/types';
+import type { Bindings } from './env';
+import { type RequestIdVars, requestId } from './middleware/request-id';
 import { ballotsRouter } from './routes/ballots';
 import { bggRouter } from './routes/bgg';
 import { tallyRouter } from './routes/tally';
 import { votesRouter } from './routes/votes';
 
-const app = new Hono<{ Bindings: Bindings }>();
+const app = new Hono<{ Bindings: Bindings; Variables: RequestIdVars }>();
 
+app.use('*', requestId);
 app.use('*', logger());
 app.use(
   '/api/*',
@@ -25,7 +27,7 @@ app.use(
 // In production, Cloudflare Access injects the CF-Access-Jwt-Assertion header
 // and validates it before the request reaches the Worker. This middleware
 // provides an extra server-side check.
-async function requireAdmin(c: Context<{ Bindings: Bindings }>, next: () => Promise<void>) {
+async function requireAdmin(c: Context<{ Bindings: Bindings; Variables: RequestIdVars }>, next: () => Promise<void>) {
   const jwt = c.req.header('CF-Access-Jwt-Assertion');
 
   // In local dev (wrangler dev), skip auth if ENVIRONMENT is development

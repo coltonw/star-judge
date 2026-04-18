@@ -1,31 +1,10 @@
 import { zValidator } from '@hono/zod-validator';
+import { createBallotSchema, updateBallotSchema } from '@star-judge/shared';
 import { Hono } from 'hono';
-import { z } from 'zod';
 import { createBallot, deleteBallot, getActiveBallot, getBallot, getBallots, updateBallot } from '../db/queries';
-import type { Bindings } from '../db/types';
+import type { Bindings } from '../env';
 
 export const ballotsRouter = new Hono<{ Bindings: Bindings }>();
-
-const candidateSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  thumbnail: z.string(),
-});
-
-const votingMethodSchema = z.enum(['star', 'ivstar', 'mj', 'ivmj', 'borda', 'irv', 'condorcet', 'dictator']);
-
-const createBallotSchema = z.object({
-  name: z.string().min(1),
-  candidates: z.array(candidateSchema).min(1),
-  officialMethod: votingMethodSchema.default('ivstar'),
-});
-
-const updateBallotSchema = z.object({
-  name: z.string().min(1),
-  candidates: z.array(candidateSchema).min(1),
-  active: z.boolean(),
-  officialMethod: votingMethodSchema.default('ivstar'),
-});
 
 // GET /api/ballots — list all (admin)
 ballotsRouter.get('/', async (c) => {

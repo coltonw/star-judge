@@ -1,6 +1,14 @@
-export type Grade = 'excellent' | 'verygood' | 'good' | 'average' | 'fair' | 'poor';
+export const GRADES = ['excellent', 'verygood', 'good', 'average', 'fair', 'poor'] as const;
+export type Grade = (typeof GRADES)[number];
 
-export const GRADES: Grade[] = ['excellent', 'verygood', 'good', 'average', 'fair', 'poor'];
+export const GRADE_VALUES: Record<Grade, number> = {
+  excellent: 5,
+  verygood: 4,
+  good: 3,
+  average: 2,
+  fair: 1,
+  poor: 0,
+};
 
 export const GRADE_LABELS: Record<Grade, string> = {
   excellent: 'Hyped',
@@ -11,7 +19,7 @@ export const GRADE_LABELS: Record<Grade, string> = {
   poor: 'Hard pass',
 };
 
-// Colors from green → red, designed for dark backgrounds
+// Green → red, tuned for dark backgrounds
 export const GRADE_COLORS: Record<Grade, string> = {
   excellent: '#52ba8c',
   verygood: '#87bc7a',
@@ -21,7 +29,17 @@ export const GRADE_COLORS: Record<Grade, string> = {
   poor: '#dd776e',
 };
 
-export type VotingMethodKey = 'star' | 'ivstar' | 'mj' | 'ivmj' | 'borda' | 'irv' | 'condorcet' | 'dictator';
+export const VOTING_METHODS = [
+  'star',
+  'ivstar',
+  'mj',
+  'ivmj',
+  'borda',
+  'irv',
+  'condorcet',
+  'dictator',
+] as const;
+export type VotingMethodKey = (typeof VOTING_METHODS)[number];
 
 export const VOTING_METHOD_LABELS: Record<VotingMethodKey, string> = {
   star: 'STAR Voting',
@@ -49,17 +67,31 @@ export interface Ballot {
   created_at: string;
 }
 
+export interface Vote {
+  id: number;
+  ballot_id: number;
+  voter_name: string;
+  session_id: string;
+  ratings: Record<string, Grade>;
+  created_at: string;
+}
+
 export interface RankedCandidate extends Candidate {
   rank: number;
   gradeCounts: Record<Grade, number>;
   totalVotes: number;
+  // STAR-specific
   starScore?: number;
   inRunoff?: boolean;
+  // Implicit Veto
   vetoed?: boolean;
   hardPassCount?: number;
+  // Borda
   bordaScore?: number;
-  irvElimRound?: number;
-  pairwiseWins?: number;
+  // IRV
+  irvElimRound?: number; // which round eliminated (undefined = winner)
+  // Condorcet
+  pairwiseWins?: number; // head-to-head matchups won
 }
 
 export interface TallyResponse {
@@ -67,10 +99,10 @@ export interface TallyResponse {
   ballotName: string;
   officialMethod: VotingMethodKey;
   voteCount: number;
-  mj: RankedCandidate[];
   star: RankedCandidate[];
-  ivmj: RankedCandidate[];
   ivstar: RankedCandidate[];
+  mj: RankedCandidate[];
+  ivmj: RankedCandidate[];
   borda: RankedCandidate[];
   irv: RankedCandidate[];
   condorcet: RankedCandidate[];

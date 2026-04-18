@@ -1,8 +1,8 @@
 <script lang="ts">
+import type { Candidate } from '@star-judge/shared';
 import { goto } from '$app/navigation';
 import { ApiError, createBallot } from '$lib/api';
 import GamePicker from '$lib/components/GamePicker.svelte';
-import type { Candidate } from '$lib/types';
 
 let name = $state('');
 let selectedGames = $state<Candidate[]>([]);

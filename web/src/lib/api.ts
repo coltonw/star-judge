@@ -1,4 +1,4 @@
-import type { Ballot, Candidate, Grade, TallyResponse, VotingMethodKey } from './types';
+import type { Ballot, Candidate, Grade, TallyResponse, VotingMethodKey } from '@star-judge/shared';
 
 // In production this will be empty (same origin via Cloudflare).
 // Set VITE_API_BASE in .env.local for local dev: http://localhost:8787

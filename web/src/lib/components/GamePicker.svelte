@@ -1,7 +1,7 @@
 <script lang="ts">
+import type { Candidate } from '@star-judge/shared';
 import { onMount } from 'svelte';
 import { ApiError, getBggCollection } from '$lib/api';
-import type { Candidate } from '$lib/types';
 
 let {
   selected = $bindable<Candidate[]>([]),

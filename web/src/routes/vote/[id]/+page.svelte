@@ -1,10 +1,9 @@
 <script lang="ts">
+import { type Ballot, GRADE_COLORS, GRADE_LABELS, GRADES, type Grade } from '@star-judge/shared';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { ApiError, castVote, checkVoted, getBallot, getSessionId } from '$lib/api';
-import type { Ballot, Grade } from '$lib/types';
-import { GRADE_COLORS, GRADE_LABELS, GRADES } from '$lib/types';
 
 const ballotId = $derived(parseInt(page.params.id ?? '', 10));
 

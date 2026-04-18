@@ -1,11 +1,10 @@
 <script lang="ts">
+import { type Ballot, type Candidate, VOTING_METHOD_LABELS, type VotingMethodKey } from '@star-judge/shared';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { ApiError, getBallot, updateBallot } from '$lib/api';
 import GamePicker from '$lib/components/GamePicker.svelte';
-import type { Ballot, Candidate, VotingMethodKey } from '$lib/types';
-import { VOTING_METHOD_LABELS } from '$lib/types';
 
 const ballotId = $derived(parseInt(page.params.id ?? '', 10));
 

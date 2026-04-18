@@ -1,4 +1,5 @@
-import { type Candidate, GRADES, type Grade, type RankedCandidate, type Vote } from '../db/types';
+import { type Candidate, GRADES, type Grade, type RankedCandidate, type Vote } from '@star-judge/shared';
+import { buildGradeCounts } from './shared/grade-counter';
 
 // Instant Runoff Voting (also called Ranked Choice).
 //
@@ -7,19 +8,23 @@ import { type Candidate, GRADES, type Grade, type RankedCandidate, type Vote } f
 // split equally among them. The candidate(s) with the fewest votes are
 // eliminated. Repeat until one candidate holds a strict majority, or only one
 // remains.
+//
+// We scale every vote by SCALE = lcm(1..N) so split votes stay in exact
+// integer arithmetic — no float drift to cause edge-case rank flips.
 
-function buildGradeCounts(candidates: Candidate[], votes: Vote[]): Record<string, Record<Grade, number>> {
-  const counts: Record<string, Record<Grade, number>> = {};
-  for (const c of candidates) {
-    counts[c.id] = Object.fromEntries(GRADES.map((g) => [g, 0])) as Record<Grade, number>;
-  }
-  for (const vote of votes) {
-    for (const c of candidates) {
-      const grade = (vote.ratings[c.id] ?? 'poor') as Grade;
-      counts[c.id][grade]++;
-    }
-  }
-  return counts;
+function gcd(a: number, b: number): number {
+  while (b !== 0) [a, b] = [b, a % b];
+  return a;
+}
+
+function lcm(a: number, b: number): number {
+  return (a / gcd(a, b)) * b;
+}
+
+function lcmRange(n: number): number {
+  let acc = 1;
+  for (let i = 2; i <= n; i++) acc = lcm(acc, i);
+  return acc;
 }
 
 export function rankIrv(candidates: Candidate[], votes: Vote[]): RankedCandidate[] {
@@ -34,8 +39,10 @@ export function rankIrv(candidates: Candidate[], votes: Vote[]): RankedCandidate
     }));
   }
 
+  const SCALE = lcmRange(Math.max(1, candidates.length));
+  const majorityThreshold = votes.length * SCALE;
+
   const remaining = new Set(candidates.map((c) => c.id));
-  // elimRound[id] = round number when eliminated (1 = first eliminated)
   const elimRound: Record<string, number> = {};
   let round = 0;
 
@@ -45,7 +52,6 @@ export function rankIrv(candidates: Candidate[], votes: Vote[]): RankedCandidate
     for (const id of remaining) voteTotals[id] = 0;
 
     for (const vote of votes) {
-      // Find the best grade any remaining candidate received from this voter
       let bestGrade: Grade | null = null;
       for (const grade of GRADES) {
         if ([...remaining].some((id) => vote.ratings[id] === grade)) {
@@ -55,19 +61,15 @@ export function rankIrv(candidates: Candidate[], votes: Vote[]): RankedCandidate
       }
       if (!bestGrade) continue;
 
-      // Split vote equally among tied top candidates
       const tops = [...remaining].filter((id) => vote.ratings[id] === bestGrade);
-      for (const id of tops) voteTotals[id] += 1 / tops.length;
+      const share = SCALE / tops.length;
+      for (const id of tops) voteTotals[id] += share;
     }
 
-    // Check for majority winner.
-    // When found, rank non-winners by their current vote totals so the runner-up
-    // (most votes) ends up with rank 2, last place with the lowest rank.
-    // Without this, all candidates still in `remaining` would incorrectly get rank 1.
-    const majorityWinner = [...remaining].find((id) => voteTotals[id] > votes.length / 2);
+    // Strict majority: vote total * 2 > total voters * SCALE
+    const majorityWinner = [...remaining].find((id) => voteTotals[id] * 2 > majorityThreshold);
     if (majorityWinner) {
       const nonWinners = [...remaining].filter((id) => id !== majorityWinner);
-      // Group by vote total — lowest-voted group gets the smallest fakeRound (→ worst rank)
       const uniqueVoteTotals = [...new Set(nonWinners.map((id) => voteTotals[id]))].sort((a, b) => a - b);
       for (let i = 0; i < uniqueVoteTotals.length; i++) {
         const vt = uniqueVoteTotals[i];
@@ -79,11 +81,9 @@ export function rankIrv(candidates: Candidate[], votes: Vote[]): RankedCandidate
       break;
     }
 
-    // Eliminate all candidates tied at the minimum
     const minVotes = Math.min(...[...remaining].map((id) => voteTotals[id]));
     const toElim = [...remaining].filter((id) => voteTotals[id] <= minVotes);
 
-    // Safety: never eliminate everyone in one round
     if (toElim.length >= remaining.size) break;
 
     for (const id of toElim) {
@@ -92,20 +92,13 @@ export function rankIrv(candidates: Candidate[], votes: Vote[]): RankedCandidate
     }
   }
 
-  // Build the result.
-  // Winners (still in `remaining`) get rank 1.
-  // Eliminated in the final round get rank 2, one round before = rank 3, etc.
-  // Candidates eliminated in the same round share a rank.
   const candMap = Object.fromEntries(candidates.map((c) => [c.id, c]));
-
   const result: RankedCandidate[] = [];
 
-  // Winners
   for (const id of remaining) {
     result.push({ ...candMap[id], rank: 1, gradeCounts: gradeCounts[id], totalVotes: votes.length });
   }
 
-  // Eliminated: last-eliminated = rank remaining.size + 1
   const byRound = new Map<number, string[]>();
   for (const [id, r] of Object.entries(elimRound)) {
     if (!byRound.has(r)) byRound.set(r, []);

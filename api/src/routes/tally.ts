@@ -1,13 +1,16 @@
+import {
+  rankBorda,
+  rankCondorcet,
+  rankDictator,
+  rankImplicitVetoMj,
+  rankImplicitVetoStar,
+  rankIrv,
+  rankMajorityJudgment,
+  rankStar,
+} from '@star-judge/voting';
 import { Hono } from 'hono';
 import { getBallot, getVotesForBallot } from '../db/queries';
-import type { Bindings } from '../db/types';
-import { rankBorda } from '../voting/borda';
-import { rankCondorcet } from '../voting/condorcet';
-import { rankDictator } from '../voting/dictator';
-import { rankImplicitVetoMj, rankImplicitVetoStar } from '../voting/implicit-veto';
-import { rankIrv } from '../voting/irv';
-import { rankMajorityJudgment } from '../voting/majority-judgment';
-import { rankStar } from '../voting/star';
+import type { Bindings } from '../env';
 
 export const tallyRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -19,6 +22,11 @@ tallyRouter.get('/:id', async (c) => {
   if (!ballot) return c.json({ error: 'Ballot not found' }, 404);
 
   const votes = await getVotesForBallot(c.env.DB, id);
+
+  // Tally responses are deterministic given (ballot, votes). Ten seconds of edge
+  // caching turns polling clients into a no-op at the origin without meaningfully
+  // stale data.
+  c.header('Cache-Control', 'public, max-age=10, s-maxage=10');
 
   const star = rankStar(ballot.candidates, votes);
   const ivstar = rankImplicitVetoStar(ballot.candidates, votes);

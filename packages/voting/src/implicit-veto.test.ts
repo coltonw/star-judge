@@ -1,9 +1,9 @@
+import type { RankedCandidate } from '@star-judge/shared';
 import { describe, expect, it } from 'vitest';
 import { rankImplicitVetoMj, rankImplicitVetoStar } from './implicit-veto';
 import { c, v, winner } from './test-helpers';
 
-// Helper: find a result entry by id
-function find(results: { id: string; vetoed?: boolean; rank: number }[], id: string) {
+function find(results: RankedCandidate[], id: string): RankedCandidate {
   return results.find((r) => r.id === id)!;
 }
 

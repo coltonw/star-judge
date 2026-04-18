@@ -12,10 +12,13 @@
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
+    "@star-judge/shared": "workspace:*",
+    "@star-judge/voting": "workspace:*",
     "hono": "^4.12.14",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.14.7",
     "@cloudflare/workers-types": "^4.20250409.0",
     "typescript": "^5.8.3",
     "vitest": "^4.1.4",

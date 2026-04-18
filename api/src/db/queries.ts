@@ -1,4 +1,5 @@
-import type { Ballot, Bindings, Candidate, Grade, Vote, VotingMethodKey } from './types';
+import type { Ballot, Candidate, Grade, Vote, VotingMethodKey } from '@star-judge/shared';
+import type { Bindings } from '../env';
 
 function parseBallot(row: Record<string, unknown>): Ballot {
   return {

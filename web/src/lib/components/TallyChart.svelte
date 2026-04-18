@@ -1,5 +1,5 @@
 <script lang="ts">
-import { GRADE_COLORS, GRADE_LABELS, GRADES, type Grade, type RankedCandidate } from '$lib/types';
+import { GRADE_COLORS, GRADE_LABELS, GRADES, type Grade, type RankedCandidate } from '@star-judge/shared';
 
 let {
   candidates,

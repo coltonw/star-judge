@@ -1,17 +1,10 @@
 import { zValidator } from '@hono/zod-validator';
+import { voteSchema } from '@star-judge/shared';
 import { Hono } from 'hono';
-import { z } from 'zod';
 import { getBallot, getVoteBySession, upsertVote } from '../db/queries';
-import type { Bindings } from '../db/types';
+import type { Bindings } from '../env';
 
 export const votesRouter = new Hono<{ Bindings: Bindings }>();
-
-const voteSchema = z.object({
-  ballotId: z.number().int().positive(),
-  voterName: z.string().min(1).max(100),
-  sessionId: z.string().uuid(),
-  ratings: z.record(z.string(), z.enum(['excellent', 'verygood', 'good', 'average', 'fair', 'poor'])),
-});
 
 // POST /api/votes — cast or update a vote (upserts on ballot_id + session_id)
 votesRouter.post('/', zValidator('json', voteSchema), async (c) => {

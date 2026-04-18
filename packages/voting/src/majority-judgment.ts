@@ -1,5 +1,4 @@
-import type { Vote } from '../db/types';
-import { type Candidate, GRADES, type Grade, type RankedCandidate } from '../db/types';
+import { type Candidate, GRADES, type Grade, type RankedCandidate, type Vote } from '@star-judge/shared';
 
 type DistancePair = [Grade, number];
 type Tallies = Partial<Record<Grade, number>>;
@@ -39,7 +38,7 @@ type DistanceFn = (votes: number, total: number, accum: number) => [number, numb
 
 // Recursive distance computation — faithfully ported from the Elixir original.
 function _distance(
-  ratings: Grade[],
+  ratings: readonly Grade[],
   tallies: Tallies,
   total: number,
   fn: DistanceFn,
