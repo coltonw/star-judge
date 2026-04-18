@@ -83,11 +83,13 @@ pnpm dev:api
 pnpm dev:web
 ```
 
-Copy `api/.dev.vars.example` to `api/.dev.vars` and fill in your D1 database ID. Run the schema migration:
+Copy `api/.dev.vars.example` to `api/.dev.vars` (empty defaults are fine — see the file for what each variable does), then initialize the local D1 database:
 
 ```bash
 pnpm --filter api db:migrate:local
 ```
+
+Local dev uses miniflare's in-process D1, so no real database has to exist on Cloudflare yet.
 
 ---
 
@@ -140,21 +142,64 @@ star-judge/
 
 ## Deployment
 
+Once the first-time bootstrap (below) is done, every deploy is one command:
+
 ```bash
-# Deploy the Hono Worker
+pnpm --filter api deploy        # deploys the Hono Worker
+# The SvelteKit frontend deploys automatically via Cloudflare Pages on push to main.
+```
+
+### First-time production bootstrap
+
+These steps only need to happen once per account. None of them can be neatly
+scripted — they either edit a tracked config file, prompt interactively, or
+live in the Cloudflare dashboard.
+
+**1. Create the remote D1 database.**
+
+```bash
+wrangler d1 create star-judge-db
+```
+
+Copy the returned `database_id` UUID and paste it into `api/wrangler.toml`,
+replacing the `00000000-...` placeholder.
+
+**2. Apply the schema to the remote database.**
+
+```bash
+pnpm --filter api db:migrate
+```
+
+**3. Configure Cloudflare Access for the admin routes.**
+
+In the [Cloudflare Zero Trust dashboard](https://one.dash.cloudflare.com/),
+create a self-hosted Access application covering `/api/admin/*` and
+`/admin/*`. Pick your identity provider (Google, GitHub, email OTP, etc.) and
+save the application. Copy the generated **Application Audience (AUD) Tag**.
+
+**4. Set the Worker secrets.**
+
+```bash
+cd api
+wrangler secret put CLOUDFLARE_ACCESS_AUD    # paste the AUD from step 3
+wrangler secret put BGG_API_KEY              # optional — blank is fine
+```
+
+**5. Deploy the Worker.**
+
+```bash
 pnpm --filter api deploy
-
-# Frontend deploys automatically via Cloudflare Pages on push to main
 ```
 
-Set these Worker secrets:
+**6. Connect the frontend to Cloudflare Pages.**
 
-```bash
-wrangler secret put BGG_API_KEY
-wrangler secret put CLOUDFLARE_ACCESS_AUD
-```
+In the Cloudflare dashboard, create a Pages project connected to this repo:
 
-Configure Cloudflare Access in Zero Trust dashboard for `/admin/*`.
+- **Build command:** `pnpm install && pnpm --filter web build`
+- **Build output directory:** `web/.svelte-kit/cloudflare`
+- **Root directory:** project root
+
+Push to `main` and the frontend auto-deploys.
 
 ---
 

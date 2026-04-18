@@ -1,0 +1,14 @@
+# Copy this file to .dev.vars. Do not commit .dev.vars.
+#
+# These values are injected into the Worker only during `wrangler dev`.
+# In production, set each one via: wrangler secret put <NAME>
+
+# Cloudflare Access Application Audience tag. Leave empty in local dev; when
+# empty and ENVIRONMENT=development, the /api/admin/* auth check is bypassed
+# (see api/src/index.ts). In production this must be set to your Access app's
+# AUD tag from the Cloudflare Zero Trust dashboard.
+CLOUDFLARE_ACCESS_AUD=""
+
+# Optional BoardGameGeek API key. BGG's public collection endpoints work
+# without authentication, so leaving this empty is fine.
+BGG_API_KEY=""
