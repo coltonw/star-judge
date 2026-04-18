@@ -27,7 +27,7 @@ const gc = (e: number, vg: number, g: number, av: number, f: number, p: number):
 const diverge: MockScenario = {
   id: 'mock-diverge',
   label: 'Methods Disagree',
-  description: 'MJ picks the polarizing crowd-splitter; STAR picks the crowd-pleaser.',
+  description: 'STAR picks the crowd-pleaser; MJ picks the polarizing favorite; Borda, IRV, and Condorcet all split.',
   tally: {
     ballotId: 0,
     ballotName: 'Game Night — Methods Compared',
@@ -309,7 +309,7 @@ const diverge: MockScenario = {
 const agree: MockScenario = {
   id: 'mock-agree',
   label: 'Methods Agree',
-  description: 'Everyone loves Wingspan — both methods pick it without hesitation.',
+  description: 'Everyone loves Wingspan — all eight methods agree without hesitation.',
   tally: {
     ballotId: 0,
     ballotName: 'Easy Night In',
@@ -504,7 +504,7 @@ const noVotes: MockScenario = {
 const tie: MockScenario = {
   id: 'mock-tie',
   label: 'Perfect Tie',
-  description: 'Two games have identical ratings — both methods deadlock at #1.',
+  description: 'Two games have identical ratings — every method deadlocks at #1 except Dictator.',
   tally: {
     ballotId: 0,
     ballotName: 'Impossible to Choose',

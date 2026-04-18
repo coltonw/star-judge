@@ -87,7 +87,7 @@ const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
       {/if}
       {#if isMock}
         <span class="dot">·</span>
-        <span class="mock-badge">mock data</span>
+        <span class="mock-badge">example scenario</span>
       {/if}
       {#if hasVoted}
         <span class="dot">·</span>
@@ -146,7 +146,7 @@ const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
         <MethodCard
           methodKey="ivstar"
           title="IV · STAR Voting"
-          description="Vetoed games are removed before scoring. Survivors compete in the normal STAR score + runoff."
+          description="Games with more Hard Passes than the least-vetoed game are disqualified first, then STAR ranks the survivors."
           official={officialMethod === 'ivstar'}
           candidates={tally.ivstar}
           mode="star"
@@ -168,7 +168,7 @@ const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
         <MethodCard
           methodKey="ivmj"
           title="IV · Majority Judgment"
-          description="Games with more Hard Passes than the least-vetoed game are disqualified first, then MJ ranks the survivors."
+          description="Same veto rule as IV·STAR — survivors run through Majority Judgment instead of STAR."
           official={officialMethod === 'ivmj'}
           candidates={tally.ivmj}
           mode="mj"

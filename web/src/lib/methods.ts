@@ -43,7 +43,7 @@ export const METHOD_INFO: Record<VotingMethodKey, MethodInfo> = {
     label: 'IV · Majority Judgment',
     tagline: 'Veto first, then MJ ranks the survivors.',
     summary:
-      'Games with more "hard pass" votes than the least-vetoed game are disqualified first. Whatever survives then runs through normal Majority Judgment. This prevents a polarizing game from winning when a sizeable minority refuses to play it.',
+      'Same idea as IV·STAR, but the survivors run through Majority Judgment instead of STAR. Games with disproportionate "hard pass" votes are disqualified first; then the median-grade winner is picked from what remains.',
     scenario: {
       scenarioId: 'mock-veto-changes-winner',
       title: 'A veto flips the winner',
@@ -73,7 +73,7 @@ export const METHOD_INFO: Record<VotingMethodKey, MethodInfo> = {
     label: 'IV · STAR Voting',
     tagline: 'Veto first, then STAR scores + runoff.',
     summary:
-      'Same idea as IV·MJ: remove every game that collected more "hard pass" votes than the least-vetoed game, then run normal STAR on the survivors. Good middle ground between "crowd-pleaser" and "nobody is stuck playing something they hate."',
+      'Every game that collected more "hard pass" votes than the least-vetoed game is disqualified first. The survivors then run through normal STAR (score phase picks two finalists, runoff picks the winner). A good middle ground between "crowd-pleaser wins" and "nobody is stuck playing something they hate."',
     scenario: {
       scenarioId: 'mock-veto-changes-winner',
       title: 'A veto flips the winner',
