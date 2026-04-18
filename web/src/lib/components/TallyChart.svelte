@@ -1,5 +1,5 @@
 <script lang="ts">
-import { GRADE_COLORS, GRADE_LABELS, GRADES, type Grade, type RankedCandidate } from '@star-judge/shared';
+import { GRADE_COLORS, GRADE_LABELS, GRADE_VALUES, GRADES, type Grade, type RankedCandidate } from '@star-judge/shared';
 
 let {
   candidates,
@@ -94,10 +94,17 @@ function avgScore(candidate: RankedCandidate): string {
               <div
                 class="segment"
                 style="width: {width}%; background: {GRADE_COLORS[grade]};"
-                title="{GRADE_LABELS[grade]}: {candidate.gradeCounts[grade]} vote{candidate.gradeCounts[grade] === 1 ? '' : 's'}"
-              ></div>
+                title="{GRADE_LABELS[grade]}: {candidate.gradeCounts[grade]} vote{candidate.gradeCounts[grade] === 1 ? '' : 's'}{mode === 'star' ? ` · ${GRADE_VALUES[grade]} pts each` : ''}"
+              >
+                {#if mode === 'star' && width >= 10}
+                  <span class="segment-label">= {GRADE_VALUES[grade]}</span>
+                {/if}
+              </div>
             {/if}
           {/each}
+          {#if mode === 'mj' && candidate.totalVotes > 0}
+            <div class="median-marker" title="Median: {GRADE_LABELS[median]}"></div>
+          {/if}
         </div>
       </div>
     {/each}
@@ -192,6 +199,7 @@ function avgScore(candidate: RankedCandidate): string {
   }
 
   .bar-wrap {
+    position: relative;
     display: flex;
     height: 28px;
     border-radius: 4px;
@@ -204,6 +212,33 @@ function avgScore(candidate: RankedCandidate): string {
     height: 100%;
     transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     min-width: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .segment-label {
+    font-size: .7rem;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.55);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* MJ median marker — a solid line at the 50% position shows exactly
+     where the cumulative count crosses half the votes (i.e., the median). */
+  .median-marker {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    left: 50%;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.9);
+    transform: translateX(-1px);
+    pointer-events: none;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.35);
   }
 
   .borda-score { color: var(--accent); }
