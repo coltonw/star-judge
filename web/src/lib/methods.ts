@@ -1,5 +1,8 @@
 import type { VotingMethodKey } from '@star-judge/shared';
 
+export type MethodMode = 'star' | 'mj' | 'borda' | 'irv' | 'condorcet' | 'dictator';
+export type MethodVariant = 'default' | 'iv' | 'dictator';
+
 export interface MethodInfo {
   key: VotingMethodKey;
   label: string;
@@ -18,6 +21,12 @@ export interface MethodInfo {
   wikiUrl?: string;
   // GitHub path to the implementation — link points at packages/voting
   sourceFile: string;
+  // Short description rendered inline on the tally page method card
+  cardDescription: string;
+  // Chart rendering mode
+  mode: MethodMode;
+  // Visual variant for MethodCard styling
+  variant?: MethodVariant;
 }
 
 export const METHOD_INFO: Record<VotingMethodKey, MethodInfo> = {
@@ -37,6 +46,9 @@ export const METHOD_INFO: Record<VotingMethodKey, MethodInfo> = {
     },
     wikiUrl: 'https://en.wikipedia.org/wiki/Majority_judgment',
     sourceFile: 'packages/voting/src/majority-judgment.ts',
+    cardDescription:
+      "Each game's median grade wins. Ties broken by how resilient that median is to being moved — resistant to strategic voting.",
+    mode: 'mj',
   },
   ivmj: {
     key: 'ivmj',
@@ -50,6 +62,9 @@ export const METHOD_INFO: Record<VotingMethodKey, MethodInfo> = {
       blurb: "MJ's winner gets vetoed — IV·MJ promotes the runner-up instead.",
     },
     sourceFile: 'packages/voting/src/implicit-veto.ts',
+    cardDescription: 'Same veto rule as IV·STAR — survivors run through Majority Judgment instead of STAR.',
+    mode: 'mj',
+    variant: 'iv',
   },
   star: {
     key: 'star',
@@ -67,6 +82,9 @@ export const METHOD_INFO: Record<VotingMethodKey, MethodInfo> = {
     },
     wikiUrl: 'https://en.wikipedia.org/wiki/STAR_voting',
     sourceFile: 'packages/voting/src/star.ts',
+    cardDescription:
+      'Highest average score picks the top 2 finalists. Ties for 2nd are broken by pairwise head-to-head. Those two go head-to-head: whoever more voters rated higher wins the runoff.',
+    mode: 'star',
   },
   ivstar: {
     key: 'ivstar',
@@ -80,6 +98,9 @@ export const METHOD_INFO: Record<VotingMethodKey, MethodInfo> = {
       blurb: 'The un-vetoed STAR runner-up takes the win.',
     },
     sourceFile: 'packages/voting/src/implicit-veto.ts',
+    cardDescription: 'Games with more Hard Passes than the least-vetoed game are disqualified first, then STAR ranks the survivors.',
+    mode: 'star',
+    variant: 'iv',
   },
   borda: {
     key: 'borda',
@@ -88,12 +109,15 @@ export const METHOD_INFO: Record<VotingMethodKey, MethodInfo> = {
     summary:
       'Each voter ranks the games. The top of a ballot is worth N−1 points, second place N−2, and so on. Games with tied grades on the same ballot split the points evenly. Highest total points wins.',
     scenario: {
-      scenarioId: 'mock-runoff-flip',
+      scenarioId: 'mock-borda-consensus',
       title: 'Rewards broad support',
       blurb: 'Borda favors the game most often ranked near the top — even if it rarely finishes first.',
     },
     wikiUrl: 'https://en.wikipedia.org/wiki/Borda_count',
     sourceFile: 'packages/voting/src/borda.ts',
+    cardDescription:
+      'Each voter ranks all games. Points are awarded by rank (top = N−1 pts, bottom = 0 pts). Tied grades split the points evenly. Highest total wins.',
+    mode: 'borda',
   },
   irv: {
     key: 'irv',
@@ -111,6 +135,9 @@ export const METHOD_INFO: Record<VotingMethodKey, MethodInfo> = {
     },
     wikiUrl: 'https://en.wikipedia.org/wiki/Instant-runoff_voting',
     sourceFile: 'packages/voting/src/irv.ts',
+    cardDescription:
+      "Voters' top remaining choice gets their vote each round. The last-place game is eliminated and votes redistribute — until one game holds a majority.",
+    mode: 'irv',
   },
   condorcet: {
     key: 'condorcet',
@@ -127,6 +154,9 @@ export const METHOD_INFO: Record<VotingMethodKey, MethodInfo> = {
     },
     wikiUrl: 'https://en.wikipedia.org/wiki/Condorcet_method',
     sourceFile: 'packages/voting/src/condorcet.ts',
+    cardDescription:
+      "Every game fights every other game head-to-head. The game that beats all others wins. If there's a rock-paper-scissors cycle… nobody wins. 🔄",
+    mode: 'condorcet',
   },
   dictator: {
     key: 'dictator',
@@ -140,6 +170,10 @@ export const METHOD_INFO: Record<VotingMethodKey, MethodInfo> = {
       blurb: 'When one person votes, they are by definition the dictator.',
     },
     sourceFile: 'packages/voting/src/dictator.ts',
+    cardDescription:
+      'Democracy is cancelled. The last person to vote picks everything. Bars show what everyone wanted — ranking shows what the dictator gets.',
+    mode: 'dictator',
+    variant: 'dictator',
   },
 };
 
@@ -156,6 +190,23 @@ export const METHOD_ORDER: VotingMethodKey[] = [
 
 export function methodInfo(key: VotingMethodKey): MethodInfo {
   return METHOD_INFO[key];
+}
+
+// Tally-page pair layout. Each pair renders side-by-side. Pairs can be
+// reordered by officialMethod to promote the highlighted method to the top.
+export const METHOD_PAIRS: [VotingMethodKey, VotingMethodKey][] = [
+  ['star', 'ivstar'],
+  ['mj', 'ivmj'],
+  ['borda', 'irv'],
+  ['condorcet', 'dictator'],
+];
+
+// Returns METHOD_PAIRS with the pair containing `official` moved to the front.
+// Other pairs preserve their relative order.
+export function orderedPairs(official: VotingMethodKey): [VotingMethodKey, VotingMethodKey][] {
+  const idx = METHOD_PAIRS.findIndex((p) => p[0] === official || p[1] === official);
+  if (idx <= 0) return METHOD_PAIRS;
+  return [METHOD_PAIRS[idx], ...METHOD_PAIRS.slice(0, idx), ...METHOD_PAIRS.slice(idx + 1)];
 }
 
 // GitHub tree URL base — keep in sync with repo URL. Used to link method source.

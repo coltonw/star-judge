@@ -1,9 +1,10 @@
 <script lang="ts">
-import type { TallyResponse } from '@star-judge/shared';
+import type { TallyResponse, VotingMethodKey } from '@star-judge/shared';
 import { page } from '$app/state';
 import { ApiError, checkVoted, getSessionId, getTally } from '$lib/api';
 import MethodCard from '$lib/components/MethodCard.svelte';
 import { computeConsensus, pickTiebreaker, summarizeMethods } from '$lib/consensus';
+import { METHOD_INFO, orderedPairs } from '$lib/methods';
 import { getMockScenario } from '$lib/mock-scenarios';
 
 const isMock = $derived(Number.isNaN(parseInt(page.params.id ?? '', 10)));
@@ -66,6 +67,13 @@ const consensusWinner = $derived(tally ? computeConsensus(tally, methods) : null
 const tiebreaker = $derived(tally ? pickTiebreaker(tally, consensusWinner) : null);
 const anyVetoedInMJ = $derived(tally?.ivmj.some((c) => c.vetoed) ?? false);
 const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
+const pairs = $derived(orderedPairs(officialMethod));
+
+function emptyNoteFor(key: VotingMethodKey): string | undefined {
+  if (key === 'ivstar') return anyVetoedInStar ? undefined : 'No games vetoed — same result as STAR.';
+  if (key === 'ivmj') return anyVetoedInMJ ? undefined : 'No games vetoed — same result as MJ.';
+  return undefined;
+}
 </script>
 
 <svelte:head>
@@ -133,93 +141,38 @@ const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
     </div>
 
     <div class="methods">
-      <div class="method-pair">
-        <MethodCard
-          methodKey="star"
-          title="STAR Voting"
-          wikiUrl="https://en.wikipedia.org/wiki/STAR_voting"
-          description="Highest average score picks the top 2 finalists. Ties for 2nd are broken by pairwise head-to-head. Those two go head-to-head: whoever more voters rated higher wins the runoff."
-          official={officialMethod === 'star'}
-          candidates={tally.star}
-          mode="star"
-        />
-        <MethodCard
-          methodKey="ivstar"
-          title="IV · STAR Voting"
-          description="Games with more Hard Passes than the least-vetoed game are disqualified first, then STAR ranks the survivors."
-          official={officialMethod === 'ivstar'}
-          candidates={tally.ivstar}
-          mode="star"
-          variant="iv"
-          emptyNote={anyVetoedInStar ? undefined : 'No games vetoed — same result as STAR.'}
-        />
-      </div>
-
-      <div class="method-pair">
-        <MethodCard
-          methodKey="mj"
-          title="Majority Judgment"
-          wikiUrl="https://en.wikipedia.org/wiki/Majority_judgment"
-          description="Each game's median grade wins. Ties broken by how resilient that median is to being moved — resistant to strategic voting."
-          official={officialMethod === 'mj'}
-          candidates={tally.mj}
-          mode="mj"
-        />
-        <MethodCard
-          methodKey="ivmj"
-          title="IV · Majority Judgment"
-          description="Same veto rule as IV·STAR — survivors run through Majority Judgment instead of STAR."
-          official={officialMethod === 'ivmj'}
-          candidates={tally.ivmj}
-          mode="mj"
-          variant="iv"
-          emptyNote={anyVetoedInMJ ? undefined : 'No games vetoed — same result as MJ.'}
-        />
-      </div>
-
-      <div class="method-pair">
-        <MethodCard
-          methodKey="borda"
-          title="Borda Count"
-          wikiUrl="https://en.wikipedia.org/wiki/Borda_count"
-          description="Each voter ranks all games. Points are awarded by rank (top = N−1 pts, bottom = 0 pts). Tied grades split the points evenly. Highest total wins."
-          official={officialMethod === 'borda'}
-          candidates={tally.borda}
-          mode="borda"
-        />
-        <MethodCard
-          methodKey="irv"
-          title="Instant Runoff (IRV)"
-          wikiUrl="https://en.wikipedia.org/wiki/Instant-runoff_voting"
-          description="Voters' top remaining choice gets their vote each round. The last-place game is eliminated and votes redistribute — until one game holds a majority."
-          official={officialMethod === 'irv'}
-          candidates={tally.irv}
-          mode="irv"
-        />
-      </div>
-
-      <div class="method-pair">
-        <MethodCard
-          methodKey="condorcet"
-          title="Condorcet"
-          wikiUrl="https://en.wikipedia.org/wiki/Condorcet_method"
-          description="Every game fights every other game head-to-head. The game that beats all others wins. If there's a rock-paper-scissors cycle… nobody wins. 🔄"
-          official={officialMethod === 'condorcet'}
-          candidates={tally.condorcet}
-          mode="condorcet"
-          condorcetParadox={tally.condorcetParadox}
-        />
-        <MethodCard
-          methodKey="dictator"
-          title="Dictator"
-          description="Democracy is cancelled. The last person to vote picks everything. Bars show what everyone wanted — ranking shows what the dictator gets."
-          official={officialMethod === 'dictator'}
-          candidates={tally.dictator}
-          mode="dictator"
-          variant="dictator"
-          dictatorName={tally.dictatorName}
-        />
-      </div>
+      {#each pairs as [leftKey, rightKey] (leftKey)}
+        {@const left = METHOD_INFO[leftKey]}
+        {@const right = METHOD_INFO[rightKey]}
+        <div class="method-pair">
+          <MethodCard
+            methodKey={left.key}
+            title={left.label}
+            wikiUrl={left.wikiUrl}
+            description={left.cardDescription}
+            official={officialMethod === left.key}
+            candidates={tally[left.key]}
+            mode={left.mode}
+            variant={left.variant}
+            emptyNote={emptyNoteFor(left.key)}
+            condorcetParadox={left.key === 'condorcet' ? tally.condorcetParadox : false}
+            dictatorName={left.key === 'dictator' ? tally.dictatorName : null}
+          />
+          <MethodCard
+            methodKey={right.key}
+            title={right.label}
+            wikiUrl={right.wikiUrl}
+            description={right.cardDescription}
+            official={officialMethod === right.key}
+            candidates={tally[right.key]}
+            mode={right.mode}
+            variant={right.variant}
+            emptyNote={emptyNoteFor(right.key)}
+            condorcetParadox={right.key === 'condorcet' ? tally.condorcetParadox : false}
+            dictatorName={right.key === 'dictator' ? tally.dictatorName : null}
+          />
+        </div>
+      {/each}
     </div>
   {/if}
 
