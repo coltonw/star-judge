@@ -1,10 +1,11 @@
 <script lang="ts">
-import type { RankedCandidate } from '@star-judge/shared';
+import type { RankedCandidate, VotingMethodKey } from '@star-judge/shared';
 import TallyChart from './TallyChart.svelte';
 
 type Mode = 'star' | 'mj' | 'borda' | 'irv' | 'condorcet' | 'dictator';
 
 interface Props {
+  methodKey: VotingMethodKey;
   title: string;
   wikiUrl?: string;
   description: string;
@@ -19,6 +20,7 @@ interface Props {
 }
 
 const {
+  methodKey,
   title,
   wikiUrl,
   description,
@@ -41,6 +43,7 @@ const {
         {title}
       {/if}
       {#if official}<span class="official-badge">official</span>{/if}
+      <a class="info-link" href="/methods#{methodKey}" title="How {title} works">ⓘ</a>
     </h2>
     <p class="method-desc">{description}</p>
   </div>
@@ -109,6 +112,18 @@ const {
     text-decoration: underline;
     text-underline-offset: 3px;
     text-decoration-color: color-mix(in srgb, var(--text-muted) 60%, transparent);
+  }
+  .info-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    margin-left: 0.3rem;
+    opacity: 0.7;
+    transition: opacity 0.15s, color 0.15s;
+  }
+  .info-link:hover {
+    color: var(--accent);
+    opacity: 1;
   }
   .no-veto-note {
     color: var(--text-muted);

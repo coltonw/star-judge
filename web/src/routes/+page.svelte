@@ -4,8 +4,6 @@ import { onMount } from 'svelte';
 import { ApiError, checkVoted, getActiveBallot, getSessionId } from '$lib/api';
 import { MOCK_SCENARIOS } from '$lib/mock-scenarios';
 
-const isDev = import.meta.env.DEV;
-
 let ballot = $state<Ballot | null>(null);
 let hasVoted = $state(false);
 let loading = $state(true);
@@ -40,20 +38,6 @@ onMount(async () => {
   <p class="subtitle">Decide what to play tonight — with math.</p>
 </div>
 
-{#if isDev}
-  <div class="dev-panel">
-    <h3 class="dev-heading">Dev Scenarios</h3>
-    <div class="scenario-grid">
-      {#each MOCK_SCENARIOS as scenario}
-        <a href="/tally/{scenario.id}" class="scenario-card">
-          <span class="scenario-label">{scenario.label}</span>
-          <span class="scenario-desc">{scenario.description}</span>
-        </a>
-      {/each}
-    </div>
-  </div>
-{/if}
-
 {#if loading}
   <p class="loading">Loading…</p>
 {:else if error}
@@ -82,6 +66,23 @@ onMount(async () => {
     {/if}
   </div>
 {/if}
+
+<section class="explore">
+  <div class="explore-head">
+    <h2>Explore the voting methods</h2>
+    <p>
+      Every ballot runs through <a href="/methods">eight voting methods</a> at once. These hand-crafted scenarios show where they disagree, when vetos matter, and what happens in rock-paper-scissors cycles.
+    </p>
+  </div>
+  <div class="scenario-grid">
+    {#each MOCK_SCENARIOS as scenario}
+      <a href="/tally/{scenario.id}" class="scenario-card">
+        <span class="scenario-label">{scenario.label}</span>
+        <span class="scenario-desc">{scenario.description}</span>
+      </a>
+    {/each}
+  </div>
+</section>
 
 <style>
   .hero {
@@ -147,21 +148,28 @@ onMount(async () => {
     line-height: 1.4;
   }
 
-  .dev-panel {
-    max-width: 640px;
-    margin: 0 auto 2.5rem;
-    padding: 1.25rem;
-    border: 1px dashed var(--border);
-    border-radius: 10px;
+  .explore {
+    max-width: 720px;
+    margin: 3rem auto 2rem;
   }
 
-  .dev-heading {
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+  .explore-head {
+    margin-bottom: 1.25rem;
+  }
+
+  .explore-head h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .explore-head p {
+    color: var(--text-muted);
+    line-height: 1.55;
+    font-size: 0.92rem;
+  }
+
+  .explore-head a {
     color: var(--accent);
-    margin-bottom: 1rem;
   }
 
   .scenario-grid {

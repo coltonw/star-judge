@@ -15,6 +15,7 @@ let { data, children }: { data: LayoutData; children: import('svelte').Snippet }
     Star Judge
   </a>
   <a href="/">Home</a>
+  <a href="/methods">Methods</a>
   {#if data.isAdmin}
     <a href="/admin">Admin</a>
   {/if}

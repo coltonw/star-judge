@@ -135,6 +135,7 @@ const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
     <div class="methods">
       <div class="method-pair">
         <MethodCard
+          methodKey="mj"
           title="Majority Judgment"
           wikiUrl="https://en.wikipedia.org/wiki/Majority_judgment"
           description="Each game's median grade wins. Ties broken by how resilient that median is to being moved — resistant to strategic voting."
@@ -143,6 +144,7 @@ const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
           mode="mj"
         />
         <MethodCard
+          methodKey="ivmj"
           title="IV · Majority Judgment"
           description="Games with more Hard Passes than the least-vetoed game are disqualified first, then MJ ranks the survivors."
           official={officialMethod === 'ivmj'}
@@ -155,6 +157,7 @@ const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
 
       <div class="method-pair">
         <MethodCard
+          methodKey="star"
           title="STAR Voting"
           wikiUrl="https://en.wikipedia.org/wiki/STAR_voting"
           description="Highest average score picks the top 2 finalists. Ties for 2nd are broken by pairwise head-to-head. Those two go head-to-head: whoever more voters rated higher wins the runoff."
@@ -163,6 +166,7 @@ const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
           mode="star"
         />
         <MethodCard
+          methodKey="ivstar"
           title="IV · STAR Voting"
           description="Vetoed games are removed before scoring. Survivors compete in the normal STAR score + runoff."
           official={officialMethod === 'ivstar'}
@@ -175,6 +179,7 @@ const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
 
       <div class="method-pair">
         <MethodCard
+          methodKey="borda"
           title="Borda Count"
           wikiUrl="https://en.wikipedia.org/wiki/Borda_count"
           description="Each voter ranks all games. Points are awarded by rank (top = N−1 pts, bottom = 0 pts). Tied grades split the points evenly. Highest total wins."
@@ -183,6 +188,7 @@ const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
           mode="borda"
         />
         <MethodCard
+          methodKey="irv"
           title="Instant Runoff (IRV)"
           wikiUrl="https://en.wikipedia.org/wiki/Instant-runoff_voting"
           description="Voters' top remaining choice gets their vote each round. The last-place game is eliminated and votes redistribute — until one game holds a majority."
@@ -194,6 +200,7 @@ const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
 
       <div class="method-pair">
         <MethodCard
+          methodKey="condorcet"
           title="Condorcet"
           wikiUrl="https://en.wikipedia.org/wiki/Condorcet_method"
           description="Every game fights every other game head-to-head. The game that beats all others wins. If there's a rock-paper-scissors cycle… nobody wins. 🔄"
@@ -203,6 +210,7 @@ const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
           condorcetParadox={tally.condorcetParadox}
         />
         <MethodCard
+          methodKey="dictator"
           title="Dictator"
           description="Democracy is cancelled. The last person to vote picks everything. Bars show what everyone wanted — ranking shows what the dictator gets."
           official={officialMethod === 'dictator'}
