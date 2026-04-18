@@ -2,7 +2,10 @@
 import type { Ballot } from '@star-judge/shared';
 import { onMount } from 'svelte';
 import { ApiError, checkVoted, getActiveBallot, getSessionId } from '$lib/api';
-import { MOCK_SCENARIOS } from '$lib/mock-scenarios';
+import { ADMIN_MOCK_SCENARIOS, MOCK_SCENARIOS } from '$lib/mock-scenarios';
+import type { LayoutData } from './$types';
+
+let { data }: { data: LayoutData } = $props();
 
 let ballot = $state<Ballot | null>(null);
 let hasVoted = $state(false);
@@ -82,6 +85,21 @@ onMount(async () => {
       </a>
     {/each}
   </div>
+
+  {#if data.isAdmin}
+    <div class="admin-fixtures">
+      <h3>Admin test fixtures</h3>
+      <p class="admin-hint">Empty/degenerate states for QA — not part of the public demo set.</p>
+      <div class="scenario-grid">
+        {#each ADMIN_MOCK_SCENARIOS as scenario}
+          <a href="/tally/{scenario.id}" class="scenario-card scenario-card-admin">
+            <span class="scenario-label">{scenario.label}</span>
+            <span class="scenario-desc">{scenario.description}</span>
+          </a>
+        {/each}
+      </div>
+    </div>
+  {/if}
 </section>
 
 <style>
@@ -208,5 +226,33 @@ onMount(async () => {
     font-size: 0.72rem;
     color: var(--text-muted);
     line-height: 1.4;
+  }
+
+  .admin-fixtures {
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px dashed var(--border);
+  }
+
+  .admin-fixtures h3 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+  }
+
+  .admin-hint {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .scenario-card-admin {
+    opacity: 0.75;
+  }
+
+  .scenario-card-admin:hover {
+    opacity: 1;
   }
 </style>

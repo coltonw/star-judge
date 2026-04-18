@@ -2366,21 +2366,28 @@ const tennessee: MockScenario = {
   },
 };
 
+// Public scenarios surfaced on the home page, ordered by "wow factor."
+// Each is a voting-theory demo, not an empty-state fixture.
 export const MOCK_SCENARIOS: MockScenario[] = [
   diverge,
-  agree,
-  noVotes,
-  tie,
-  runoffFlip,
-  oneVote,
-  vetoNodiff,
-  vetoOneSurvivor,
-  vetoChangesWinner,
-  allFourDiffer,
-  condorcetCycle,
   tennessee,
+  condorcetCycle,
+  runoffFlip,
+  allFourDiffer,
+  vetoChangesWinner,
+  vetoOneSurvivor,
+  vetoNodiff,
+  tie,
+  agree,
 ];
 
+// Admin-only scenarios. These are empty/degenerate-state fixtures — useful
+// for QA, not for demonstrating voting theory.
+export const ADMIN_MOCK_SCENARIOS: MockScenario[] = [oneVote, noVotes];
+
+// Full set for id lookups (tally page still needs to resolve admin IDs).
+export const ALL_MOCK_SCENARIOS: MockScenario[] = [...MOCK_SCENARIOS, ...ADMIN_MOCK_SCENARIOS];
+
 export function getMockScenario(id: string): MockScenario | undefined {
-  return MOCK_SCENARIOS.find((s) => s.id === id);
+  return ALL_MOCK_SCENARIOS.find((s) => s.id === id);
 }

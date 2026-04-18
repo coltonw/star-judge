@@ -43,7 +43,7 @@ describe('Home page (+page.svelte)', () => {
     });
     vi.mocked(checkVoted).mockResolvedValue({ hasVoted: false as const });
 
-    render(Page);
+    render(Page, { props: { data: { isAdmin: false } } });
 
     // Initially shows loading
     expect(screen.getByText('Loading…')).toBeInTheDocument();
@@ -67,7 +67,7 @@ describe('Home page (+page.svelte)', () => {
     });
     vi.mocked(checkVoted).mockResolvedValue({ hasVoted: true, voterName: 'Alice', ratings: {} });
 
-    render(Page);
+    render(Page, { props: { data: { isAdmin: false } } });
 
     await waitFor(() => {
       expect(screen.getByRole('link', { name: /See Results/i })).toBeInTheDocument();
@@ -79,7 +79,7 @@ describe('Home page (+page.svelte)', () => {
     const { ApiError } = await import('$lib/api');
     vi.mocked(getActiveBallot).mockRejectedValue(new ApiError('client', 404, 'Not found'));
 
-    render(Page);
+    render(Page, { props: { data: { isAdmin: false } } });
 
     await waitFor(() => {
       expect(screen.getByText(/No active ballot right now/i)).toBeInTheDocument();
@@ -89,7 +89,7 @@ describe('Home page (+page.svelte)', () => {
   it('exits loading state even when API fails', async () => {
     vi.mocked(getActiveBallot).mockRejectedValue(new Error('Network error'));
 
-    render(Page);
+    render(Page, { props: { data: { isAdmin: false } } });
 
     await waitFor(() => {
       expect(screen.queryByText('Loading…')).not.toBeInTheDocument();
