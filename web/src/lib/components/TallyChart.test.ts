@@ -46,9 +46,7 @@ describe('TallyChart', () => {
 
   it('shows veto badge with hard pass count for vetoed candidates', () => {
     render(TallyChart, {
-      candidates: [
-        mkCandidate({ id: 'a', vetoed: true, hardPassCount: 4 }),
-      ],
+      candidates: [mkCandidate({ id: 'a', vetoed: true, hardPassCount: 4 })],
       mode: 'mj',
     });
     expect(screen.getByText(/vetoed/i)).toBeInTheDocument();

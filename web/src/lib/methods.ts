@@ -144,10 +144,10 @@ export const METHOD_INFO: Record<VotingMethodKey, MethodInfo> = {
 };
 
 export const METHOD_ORDER: VotingMethodKey[] = [
-  'mj',
-  'ivmj',
   'star',
   'ivstar',
+  'mj',
+  'ivmj',
   'borda',
   'irv',
   'condorcet',

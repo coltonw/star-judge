@@ -27,7 +27,9 @@ The tally page shows all eight results in real time (polls every 5 seconds), hig
 
 ## Why this is interesting
 
-Most voting apps just count hands. This one shows you *why* that's not enough.
+You probably only know one voting method — whichever one your country or group happens to use. Star Judge runs eight at once, so every ballot doubles as a ringside seat on how different election systems answer the same question (and how often they disagree).
+
+The tool works for picking a board game. The fun part is watching the methods fight.
 
 **Load up the mock scenarios** to see edge cases that would be impossible to manufacture in real life:
 
@@ -36,6 +38,8 @@ Most voting apps just count hands. This one shows you *why* that's not enough.
 - **All Four Disagree** — constructed so MJ, STAR, IV·MJ, and IV·STAR each pick a different winner
 - **Condorcet Cycle** — Azul > Brass > Catan > Azul; a genuine rock-paper-scissors deadlock where MJ, STAR, Borda, and IRV still disagree on who should win the tiebreak
 - **Tennessee Capital** — the classic political science example: Memphis has plurality (40%) but *loses every single head-to-head*. Nashville is the Condorcet winner. IRV somehow picks Knoxville. Memphis and Knoxville both get vetoed.
+
+The `/methods` page has a plain-English explainer for each method alongside the scenario it handles differently.
 
 ---
 
@@ -85,40 +89,44 @@ pnpm --filter api db:migrate:local
 
 ```
 star-judge/
-├── api/               # Hono Cloudflare Worker
-│   ├── src/
-│   │   ├── index.ts           # App entrypoint
-│   │   ├── routes/
-│   │   │   ├── ballots.ts     # CRUD for ballots (admin)
-│   │   │   ├── votes.ts       # Cast + retrieve votes
-│   │   │   ├── tally.ts       # Compute all 8 voting methods
-│   │   │   └── bgg.ts         # BoardGameGeek collection proxy
-│   │   ├── db/
-│   │   │   ├── schema.sql
-│   │   │   └── queries.ts
-│   │   └── voting/
+├── packages/
+│   ├── voting/        # @star-judge/voting — the 8 methods, pure TS, zero CF deps
+│   │   └── src/
+│   │       ├── star.ts           # STAR + runoff
 │   │       ├── majority-judgment.ts
-│   │       ├── star.ts            # STAR + pairwise tiebreaking
-│   │       ├── implicit-veto.ts   # IV·MJ and IV·STAR
+│   │       ├── implicit-veto.ts  # IV·STAR and IV·MJ
 │   │       ├── borda.ts
-│   │       ├── irv.ts
-│   │       ├── condorcet.ts       # Copeland + paradox detection
-│   │       └── dictator.ts
-│   └── wrangler.toml
+│   │       ├── irv.ts            # exact rational arithmetic
+│   │       ├── condorcet.ts      # Copeland + paradox detection
+│   │       ├── dictator.ts
+│   │       └── shared/           # buildGradeCounts, pairwiseWinner
+│   └── shared/        # @star-judge/shared — types + Zod schemas
+│       └── src/
+│           ├── types.ts          # Candidate, Ballot, Grade, TallyResponse
+│           └── schemas.ts        # Zod schemas used by api + web
 │
-└── web/               # SvelteKit frontend
+├── api/               # Hono Cloudflare Worker
+│   └── src/
+│       ├── index.ts              # app entrypoint + request-id middleware
+│       ├── routes/               # ballots, votes, tally, bgg
+│       ├── middleware/           # request-id, admin auth
+│       └── db/                   # schema.sql, queries.ts
+│
+└── web/               # SvelteKit 5 frontend
     └── src/
         ├── routes/
-        │   ├── +page.svelte              # Home — active ballot
+        │   ├── +page.svelte              # Home — active ballot + scenarios
+        │   ├── methods/+page.svelte      # Educational: 8 methods explained
         │   ├── vote/[id]/+page.svelte    # Rating form
         │   ├── tally/[id]/+page.svelte   # Results (live + mock)
         │   └── admin/                    # Ballot management
         └── lib/
-            ├── api.ts
-            ├── types.ts
-            ├── mock-scenarios.ts         # 12 canned scenarios
+            ├── methods.ts                # METHOD_INFO — single source of truth
+            ├── consensus.ts              # winner / tiebreaker derivation
+            ├── mock-scenarios.ts         # hand-crafted canned tallies
             └── components/
-                ├── TallyChart.svelte     # Animated stacked bars
+                ├── MethodCard.svelte
+                ├── TallyChart.svelte     # animated stacked bars
                 └── GamePicker.svelte     # BGG collection picker
 ```
 

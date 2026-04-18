@@ -135,28 +135,6 @@ const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
     <div class="methods">
       <div class="method-pair">
         <MethodCard
-          methodKey="mj"
-          title="Majority Judgment"
-          wikiUrl="https://en.wikipedia.org/wiki/Majority_judgment"
-          description="Each game's median grade wins. Ties broken by how resilient that median is to being moved — resistant to strategic voting."
-          official={officialMethod === 'mj'}
-          candidates={tally.mj}
-          mode="mj"
-        />
-        <MethodCard
-          methodKey="ivmj"
-          title="IV · Majority Judgment"
-          description="Games with more Hard Passes than the least-vetoed game are disqualified first, then MJ ranks the survivors."
-          official={officialMethod === 'ivmj'}
-          candidates={tally.ivmj}
-          mode="mj"
-          variant="iv"
-          emptyNote={anyVetoedInMJ ? undefined : 'No games vetoed — same result as MJ.'}
-        />
-      </div>
-
-      <div class="method-pair">
-        <MethodCard
           methodKey="star"
           title="STAR Voting"
           wikiUrl="https://en.wikipedia.org/wiki/STAR_voting"
@@ -174,6 +152,28 @@ const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
           mode="star"
           variant="iv"
           emptyNote={anyVetoedInStar ? undefined : 'No games vetoed — same result as STAR.'}
+        />
+      </div>
+
+      <div class="method-pair">
+        <MethodCard
+          methodKey="mj"
+          title="Majority Judgment"
+          wikiUrl="https://en.wikipedia.org/wiki/Majority_judgment"
+          description="Each game's median grade wins. Ties broken by how resilient that median is to being moved — resistant to strategic voting."
+          official={officialMethod === 'mj'}
+          candidates={tally.mj}
+          mode="mj"
+        />
+        <MethodCard
+          methodKey="ivmj"
+          title="IV · Majority Judgment"
+          description="Games with more Hard Passes than the least-vetoed game are disqualified first, then MJ ranks the survivors."
+          official={officialMethod === 'ivmj'}
+          candidates={tally.ivmj}
+          mode="mj"
+          variant="iv"
+          emptyNote={anyVetoedInMJ ? undefined : 'No games vetoed — same result as MJ.'}
         />
       </div>
 
