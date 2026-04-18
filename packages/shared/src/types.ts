@@ -92,6 +92,8 @@ export interface RankedCandidate extends Candidate {
   irvElimRound?: number; // which round eliminated (undefined = winner)
   // Condorcet
   pairwiseWins?: number; // head-to-head matchups won
+  // Dictator
+  dictatorGrade?: Grade; // grade the last voter gave this candidate
 }
 
 export interface TallyResponse {

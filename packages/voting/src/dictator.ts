@@ -42,9 +42,12 @@ export function rankDictator(
   // Last vote by insertion order (queries are sorted by created_at ASC)
   const dictatorVote = votes[votes.length - 1];
 
+  const dictatorGrades: Record<string, Grade> = {};
   const dictatorValues: Record<string, number> = {};
   for (const c of candidates) {
-    dictatorValues[c.id] = GRADE_VALUES[(dictatorVote.ratings[c.id] ?? 'poor') as Grade];
+    const grade = (dictatorVote.ratings[c.id] ?? 'poor') as Grade;
+    dictatorGrades[c.id] = grade;
+    dictatorValues[c.id] = GRADE_VALUES[grade];
   }
 
   const sorted = [...candidates].sort((a, b) => dictatorValues[b.id] - dictatorValues[a.id]);
@@ -55,6 +58,7 @@ export function rankDictator(
       rank: sorted.findIndex((s) => dictatorValues[s.id] === dictatorValues[c.id]) + 1,
       gradeCounts: gradeCounts[c.id],
       totalVotes: votes.length,
+      dictatorGrade: dictatorGrades[c.id],
     })),
     dictatorName: dictatorVote.voter_name,
   };

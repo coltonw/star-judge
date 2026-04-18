@@ -1,4 +1,4 @@
-import type { TallyResponse } from '@star-judge/shared';
+import type { Grade, RankedCandidate, TallyResponse } from '@star-judge/shared';
 
 export interface MockScenario {
   id: string;
@@ -18,6 +18,28 @@ const gc = (e: number, vg: number, g: number, av: number, f: number, p: number):
   fair: f,
   poor: p,
 });
+
+// Rank-indexed preference lists: rank N prefers the Nth grade, falling back to
+// nearest grades that actually have nonzero votes (so the highlight lands on a
+// visible segment in the chart).
+const DICT_PREFS: Grade[][] = [
+  ['excellent', 'verygood', 'good', 'average', 'fair', 'poor'],
+  ['verygood', 'good', 'excellent', 'average', 'fair', 'poor'],
+  ['good', 'verygood', 'average', 'excellent', 'fair', 'poor'],
+  ['average', 'good', 'fair', 'verygood', 'poor', 'excellent'],
+  ['fair', 'poor', 'average', 'good', 'verygood', 'excellent'],
+  ['poor', 'fair', 'average', 'good', 'verygood', 'excellent'],
+];
+
+function pickDictatorGrade(rank: number, counts: GC): Grade {
+  const prefs = DICT_PREFS[Math.min(Math.max(rank, 1), 6) - 1];
+  return prefs.find((g) => counts[g] > 0) ?? 'poor';
+}
+
+// Wraps a dictator array and populates dictatorGrade on each entry, based on
+// the candidate's rank and which grades actually received votes.
+const d = <T extends Omit<RankedCandidate, 'dictatorGrade'>>(entries: T[]): (T & { dictatorGrade: Grade })[] =>
+  entries.map((e) => ({ ...e, dictatorGrade: pickDictatorGrade(e.rank, e.gradeCounts as GC) }));
 
 // ─── Scenario 1: Methods Disagree ────────────────────────────────────────────
 // MJ: Catan #1 (Excellent median, polarizing 4E+3P).
@@ -294,13 +316,13 @@ const diverge: MockScenario = {
     ],
     condorcetParadox: false,
     // Dictator: Sam voted last and loves Catan despite the haters
-    dictator: [
+    dictator: d([
       { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
       { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(0, 7, 0, 0, 0, 0) },
       { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(1, 4, 2, 0, 0, 0) },
       { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
       { id: 'ttr', name: 'Ticket to Ride', thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(0, 0, 4, 3, 0, 0) },
-    ],
+    ]),
     dictatorName: 'Sam',
   },
 };
@@ -467,11 +489,11 @@ const agree: MockScenario = {
       },
     ],
     condorcetParadox: false,
-    dictator: [
+    dictator: d([
       { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(4, 1, 0, 0, 0, 0) },
       { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(1, 2, 2, 0, 0, 0) },
       { id: 'azul', name: 'Azul', thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0, 1, 2, 1, 1, 0) },
-    ],
+    ]),
     dictatorName: 'Pat',
   },
 };
@@ -494,7 +516,7 @@ const noVotes: MockScenario = {
     irv: [],
     condorcet: [],
     condorcetParadox: false,
-    dictator: [],
+    dictator: d([]),
     dictatorName: null,
   },
 };
@@ -654,11 +676,11 @@ const tie: MockScenario = {
       },
     ],
     condorcetParadox: false,
-    dictator: [
+    dictator: d([
       { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
       { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
       { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0, 1, 3, 3, 0, 0) },
-    ],
+    ]),
     dictatorName: 'Jordan',
   },
 };
@@ -857,7 +879,7 @@ const runoffFlip: MockScenario = {
     ],
     condorcetParadox: false,
     // Dictator: Jordan voted last and is a Cosmic Encounter devotee
-    dictator: [
+    dictator: d([
       {
         id: 'cosmic',
         name: 'Cosmic Encounter',
@@ -868,7 +890,7 @@ const runoffFlip: MockScenario = {
       },
       { id: 'terra', name: 'Terra Mystica', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(0, 5, 0, 0, 0, 2) },
       { id: 'chess', name: 'Chess', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0, 0, 3, 4, 0, 0) },
-    ],
+    ]),
     dictatorName: 'Jordan',
   },
 };
@@ -1036,11 +1058,11 @@ const oneVote: MockScenario = {
     ],
     condorcetParadox: false,
     // The only voter is the dictator by default
-    dictator: [
+    dictator: d([
       { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 1, gradeCounts: gc(1, 0, 0, 0, 0, 0) },
       { id: 'catan', name: 'Catan', thumbnail: '', rank: 2, totalVotes: 1, gradeCounts: gc(0, 0, 1, 0, 0, 0) },
       { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 1, gradeCounts: gc(0, 0, 0, 0, 1, 0) },
-    ],
+    ]),
     dictatorName: 'Riley',
   },
 };
@@ -1207,11 +1229,11 @@ const vetoNodiff: MockScenario = {
       },
     ],
     condorcetParadox: false,
-    dictator: [
+    dictator: d([
       { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(0, 3, 1, 0, 0, 1) },
       { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(3, 1, 0, 0, 0, 1) },
       { id: 'azul', name: 'Azul', thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0, 0, 2, 2, 0, 1) },
-    ],
+    ]),
     dictatorName: 'Sam',
   },
 };
@@ -1399,11 +1421,11 @@ const vetoOneSurvivor: MockScenario = {
       },
     ],
     condorcetParadox: false,
-    dictator: [
+    dictator: d([
       { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 6, gradeCounts: gc(4, 0, 0, 0, 0, 2) },
       { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 2, totalVotes: 6, gradeCounts: gc(2, 4, 0, 0, 0, 0) },
       { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 3, totalVotes: 6, gradeCounts: gc(3, 0, 0, 0, 0, 3) },
-    ],
+    ]),
     dictatorName: 'Alex',
   },
 };
@@ -1581,11 +1603,11 @@ const vetoChangesWinner: MockScenario = {
       },
     ],
     condorcetParadox: false,
-    dictator: [
+    dictator: d([
       { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(4, 0, 0, 0, 0, 1) },
       { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(2, 3, 0, 0, 0, 0) },
       { id: 'azul', name: 'Azul', thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0, 2, 3, 0, 0, 0) },
-    ],
+    ]),
     dictatorName: 'Sam',
   },
 };
@@ -1840,7 +1862,7 @@ const allFourDiffer: MockScenario = {
     ],
     condorcetParadox: false,
     // Dictator: Sam voted last and picks Dominion
-    dictator: [
+    dictator: d([
       { id: 'dom', name: 'Dominion', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(2, 1, 4, 0, 0, 0) },
       {
         id: 'brass',
@@ -1852,7 +1874,7 @@ const allFourDiffer: MockScenario = {
       },
       { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
       { id: 'azul', name: 'Azul', thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
-    ],
+    ]),
     dictatorName: 'Sam',
   },
 };
@@ -2059,7 +2081,7 @@ const condorcetCycle: MockScenario = {
     ],
     condorcetParadox: true,
     // Dictator: Morgan (the lone Group C voter, last to vote) picks Catan
-    dictator: [
+    dictator: d([
       { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(1, 3, 0, 3, 0, 0) },
       { id: 'azul', name: 'Azul', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(3, 1, 3, 0, 0, 0) },
       {
@@ -2070,7 +2092,7 @@ const condorcetCycle: MockScenario = {
         totalVotes: 7,
         gradeCounts: gc(3, 3, 1, 0, 0, 0),
       },
-    ],
+    ]),
     dictatorName: 'Morgan',
   },
 };
@@ -2334,12 +2356,12 @@ const tennessee: MockScenario = {
     ],
     condorcetParadox: false,
     // Dictator: Kyle voted last — a Knoxville fan
-    dictator: [
+    dictator: d([
       { id: 'knox', name: 'Knoxville', thumbnail: '', rank: 1, totalVotes: 20, gradeCounts: gc(4, 3, 5, 0, 0, 8) },
       { id: 'chat', name: 'Chattanooga', thumbnail: '', rank: 2, totalVotes: 20, gradeCounts: gc(3, 9, 8, 0, 0, 0) },
       { id: 'nash', name: 'Nashville', thumbnail: '', rank: 3, totalVotes: 20, gradeCounts: gc(5, 8, 7, 0, 0, 0) },
       { id: 'mem', name: 'Memphis', thumbnail: '', rank: 4, totalVotes: 20, gradeCounts: gc(8, 0, 0, 0, 0, 12) },
-    ],
+    ]),
     dictatorName: 'Kyle',
   },
 };

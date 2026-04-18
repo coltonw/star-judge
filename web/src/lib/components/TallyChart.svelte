@@ -102,11 +102,15 @@ function avgScore(candidate: RankedCandidate): string {
             {#if width > 0}
               <div
                 class="segment"
+                class:dictator-grade={mode === 'dictator' && candidate.dictatorGrade === grade}
                 style="width: {width}%; background: {GRADE_COLORS[grade]};"
-                title="{GRADE_LABELS[grade]}: {candidate.gradeCounts[grade]} vote{candidate.gradeCounts[grade] === 1 ? '' : 's'}{mode === 'star' ? ` · ${GRADE_VALUES[grade]} pts each` : ''}"
+                title="{GRADE_LABELS[grade]}: {candidate.gradeCounts[grade]} vote{candidate.gradeCounts[grade] === 1 ? '' : 's'}{mode === 'star' ? ` · ${GRADE_VALUES[grade]} pts each` : ''}{mode === 'dictator' && candidate.dictatorGrade === grade ? ` · ${dictatorName ?? 'dictator'} picked this` : ''}"
               >
                 {#if mode === 'star' && width >= 10}
                   <span class="segment-label">= {GRADE_VALUES[grade]}</span>
+                {/if}
+                {#if mode === 'dictator' && candidate.dictatorGrade === grade && width >= 8}
+                  <span class="dictator-mark">👑</span>
                 {/if}
               </div>
             {/if}
@@ -245,6 +249,18 @@ function avgScore(candidate: RankedCandidate): string {
     letter-spacing: 0.02em;
     white-space: nowrap;
     pointer-events: none;
+  }
+
+  .segment.dictator-grade {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);
+    position: relative;
+  }
+
+  .dictator-mark {
+    font-size: .85rem;
+    line-height: 1;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
   }
 
   /* MJ median marker — a solid line at the 50% position shows exactly
