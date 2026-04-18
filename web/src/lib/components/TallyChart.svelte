@@ -87,7 +87,16 @@ function avgScore(candidate: RankedCandidate): string {
             {/if}
           {/if}
         </div>
-        <div class="bar-wrap">
+        <div
+          class="bar-wrap"
+          class:condorcet-winner={mode === 'condorcet' &&
+            !condorcetParadox &&
+            !candidate.vetoed &&
+            candidate.pairwiseWins === totalCandidates - 1}
+          class:cycle-participant={mode === 'condorcet' &&
+            condorcetParadox &&
+            candidate.pairwiseWins === (totalCandidates - 1) / 2}
+        >
           {#each GRADES as grade}
             {@const width = pct(candidate, grade)}
             {#if width > 0}
@@ -206,6 +215,17 @@ function avgScore(candidate: RankedCandidate): string {
     overflow: hidden;
     background: var(--bg-hover);
     grid-column: 1 / -1;
+  }
+
+  .bar-wrap.condorcet-winner {
+    outline: 2px solid var(--grade-excellent);
+    outline-offset: 2px;
+    box-shadow: 0 0 10px color-mix(in srgb, var(--grade-excellent) 45%, transparent);
+  }
+
+  .bar-wrap.cycle-participant {
+    outline: 2px dashed var(--accent);
+    outline-offset: 2px;
   }
 
   .segment {
