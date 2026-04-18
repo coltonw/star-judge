@@ -1,4 +1,8 @@
-# Star Judge
+<p align="center">
+  <img src="web/static/logo.png" alt="Star Judge logo" width="120" />
+</p>
+
+<h1 align="center">Star Judge</h1>
 
 **A board game voting app that runs every vote through eight different election methods simultaneously** — so you can see exactly where the methods agree, where they fight, and occasionally witness the full chaos of a Condorcet paradox on a Tuesday night.
 
@@ -61,6 +65,8 @@ Cloudflare D1 (SQLite)
 - **Admin auth**: Cloudflare Access — Google/GitHub OAuth with zero auth code. The login UI is entirely managed by Cloudflare.
 - **Voter identity**: UUID in `localStorage` — honor-system double-vote prevention with a 409 on conflict.
 - **Linting**: [Biome](https://biomejs.dev/) with experimental Svelte support.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the monorepo layout, request flow, auth model, and testing strategy.
 
 ---
 
