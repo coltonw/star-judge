@@ -5,8 +5,10 @@ import Page from './+page.svelte';
 vi.mock('$lib/api', () => ({
   ApiError: class ApiError extends Error {
     constructor(
+      public kind: 'network' | 'client' | 'server' | 'parse',
       public status: number,
-      message: string
+      message: string,
+      public body?: unknown
     ) {
       super(message);
     }
@@ -75,7 +77,7 @@ describe('Home page (+page.svelte)', () => {
 
   it('shows error message when no active ballot (404)', async () => {
     const { ApiError } = await import('$lib/api');
-    vi.mocked(getActiveBallot).mockRejectedValue(new ApiError(404, 'Not found'));
+    vi.mocked(getActiveBallot).mockRejectedValue(new ApiError('client', 404, 'Not found'));
 
     render(Page);
 

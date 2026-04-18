@@ -4,28 +4,61 @@ import type { Ballot, Candidate, Grade, TallyResponse, VotingMethodKey } from '@
 // Set VITE_API_BASE in .env.local for local dev: http://localhost:8787
 const BASE = import.meta.env.VITE_API_BASE ?? '';
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    credentials: 'include',
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, (body as { error?: string }).error ?? res.statusText);
-  }
-  return res.json();
-}
+// Thrown for any non-2xx response, or for network/parse failures. Callers can
+// distinguish with `error.kind`: 'network' (never reached the server), 'client'
+// (4xx — input problem), 'server' (5xx — server bug), or 'parse' (malformed
+// response). `status` is 0 for network/parse failures.
+export type ApiErrorKind = 'network' | 'client' | 'server' | 'parse';
 
 export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string
-  ) {
+  readonly kind: ApiErrorKind;
+  readonly status: number;
+  readonly body: unknown;
+
+  constructor(kind: ApiErrorKind, status: number, message: string, body?: unknown) {
     super(message);
+    this.kind = kind;
+    this.status = status;
+    this.body = body;
+  }
+
+  get isRetryable(): boolean {
+    return this.kind === 'network' || (this.kind === 'server' && this.status !== 501);
+  }
+}
+
+function classify(status: number): ApiErrorKind {
+  if (status >= 500) return 'server';
+  if (status >= 400) return 'client';
+  return 'server';
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      credentials: 'include',
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...init?.headers,
+      },
+    });
+  } catch (e) {
+    // TypeError from fetch means DNS / offline / CORS / aborted.
+    throw new ApiError('network', 0, e instanceof Error ? e.message : 'Network request failed');
+  }
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const message = (body as { error?: string }).error ?? res.statusText ?? `HTTP ${res.status}`;
+    throw new ApiError(classify(res.status), res.status, message, body);
+  }
+
+  try {
+    return (await res.json()) as T;
+  } catch (e) {
+    throw new ApiError('parse', res.status, e instanceof Error ? e.message : 'Invalid JSON response');
   }
 }
 
