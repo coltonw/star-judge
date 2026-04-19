@@ -13,10 +13,15 @@ const app = new Hono<{ Bindings: Bindings; Variables: RequestIdVars }>();
 
 app.use('*', requestId);
 app.use('*', logger());
+const ALLOWED_ORIGINS = new Set([
+  'https://star-judge.pages.dev',
+  'https://star-judge.willcolton.com',
+]);
+
 app.use(
   '/api/*',
   cors({
-    origin: (origin) => origin, // Cloudflare Pages origin — tighten in production
+    origin: (origin) => (ALLOWED_ORIGINS.has(origin) ? origin : null),
     allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'CF-Access-Jwt-Assertion'],
     credentials: true,

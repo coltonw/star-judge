@@ -172,10 +172,10 @@ pnpm --filter api db:migrate
 
 **3. Configure Cloudflare Access for the admin routes.**
 
-In the [Cloudflare Zero Trust dashboard](https://one.dash.cloudflare.com/),
+In the [Cloudflare Zero Trust dashboard](https://dash.cloudflare.com/one/),
 create a self-hosted Access application covering `/api/admin/*` and
 `/admin/*`. Pick your identity provider (Google, GitHub, email OTP, etc.) and
-save the application. Copy the generated **Application Audience (AUD) Tag**.
+save the application.
 
 **4. Set the Worker secrets.**
 
