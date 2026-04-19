@@ -5,6 +5,7 @@ export interface MockScenario {
   label: string;
   description: string;
   tally: TallyResponse;
+  related?: { id: string; label: string };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -2639,23 +2640,25 @@ const tennessee: MockScenario = {
   },
 };
 
-// ─── Scenario: IRV Non-Monotonicity — Sincere ────────────────────────────────
-// 17 voters split four ways. Wingspan wins every method (including IRV).
-// Pairwise comparisons form a cycle (Wingspan > Brass > Catan > Wingspan), so
-// Condorcet has no winner. Morgan is the last voter, in the brass>wing>catan
-// camp — Dictator picks Brass.
+// ─── Scenario: IRV Non-Monotonicity — Baseline ───────────────────────────────
+// 17 voters split four ways (the canonical Woodall example — smaller variants
+// hit ties). Wingspan wins every method, including IRV. Pairwise comparisons
+// form a cycle (Wingspan > Brass > Catan > Wingspan), so Condorcet has no
+// winner. Morgan is the last voter, in the brass>wing>catan camp — Dictator
+// picks Brass.
 //
 // IRV rounds: R1 wing=6, brass=6, catan=5 → catan eliminated.
 //             R2 wing=11, brass=6 → Wingspan wins.
 //
-// Companion to irvRaised: two voters strategically raise Wingspan; IRV flips.
+// Companion to irvRaised: raising Wingspan in two ballots makes IRV flip.
 const irvSincere: MockScenario = {
   id: 'mock-irv-sincere',
-  label: 'IRV — Sincere Vote',
-  description: "Wingspan wins every method, including IRV. Next card: two voters try to help by raising Wingspan further — and IRV kicks Wingspan out.",
+  label: 'IRV — Baseline',
+  description: 'Wingspan wins every method, including IRV. Its companion scenario raises Wingspan on two ballots — and IRV kicks Wingspan out.',
+  related: { id: 'mock-irv-raised', label: 'IRV — Raising Backfires' },
   tally: {
     ballotId: 0,
-    ballotName: 'Board Game Showdown — Sincere Ballots',
+    ballotName: 'Board Game Showdown — Baseline Ballots',
     officialMethod: 'irv',
     voteCount: 17,
     mj: [
@@ -2789,7 +2792,8 @@ const irvSincere: MockScenario = {
 const irvRaised: MockScenario = {
   id: 'mock-irv-raised',
   label: 'IRV — Raising Backfires',
-  description: 'Same ballot as before — but two voters bump Wingspan to first. IRV now eliminates Brass, transfers the votes to Catan, and Catan wins. Raising Wingspan made Wingspan lose.',
+  description: 'Same ballot as the Baseline — but two voters bump Wingspan to first. IRV now eliminates Brass, transfers the votes to Catan, and Catan wins. Raising Wingspan made Wingspan lose.',
+  related: { id: 'mock-irv-sincere', label: 'IRV — Baseline' },
   tally: {
     ballotId: 0,
     ballotName: 'Board Game Showdown — Wingspan Raised',
@@ -3061,7 +3065,8 @@ const compromiseWins: MockScenario = {
 const bordaHonest: MockScenario = {
   id: 'mock-borda-honest',
   label: 'Borda Burying — Honest',
-  description: 'Codenames is everyone\u2019s pretty-good compromise — it wins STAR, Borda, and Condorcet. Next card: Brass-fans try to game Borda by burying Codenames.',
+  description: 'Codenames is everyone\u2019s pretty-good compromise — it wins STAR, Borda, and Condorcet. Its companion scenario shows what happens when Brass-fans try to game Borda by burying Codenames.',
+  related: { id: 'mock-borda-strategic', label: 'Borda Burying — Strategic' },
   tally: {
     ballotId: 0,
     ballotName: 'Honest Ballots',
@@ -3176,7 +3181,8 @@ const bordaHonest: MockScenario = {
 const bordaStrategic: MockScenario = {
   id: 'mock-borda-strategic',
   label: 'Borda Burying — Strategic',
-  description: 'Brass-fans downgrade Codenames to Poor to kill the compromise. STAR flips to Brass (strategy works). Borda flips to Catan — burying Codenames accidentally elevated Catan on their ballots.',
+  description: 'Same voters as the Honest ballot, but Brass-fans downgrade Codenames to Poor to kill the compromise. STAR flips to Brass (strategy works). Borda flips to Catan — burying Codenames accidentally elevated Catan on their ballots.',
+  related: { id: 'mock-borda-honest', label: 'Borda Burying — Honest' },
   tally: {
     ballotId: 0,
     ballotName: 'Brass-Fans Bury the Compromise',

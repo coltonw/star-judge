@@ -93,7 +93,14 @@ function emptyNoteFor(key: VotingMethodKey): string | undefined {
     {/if}
     <h1>{tally.ballotName}</h1>
     {#if isMock && scenario}
-      <p class="scenario-description">{scenario.description}</p>
+      <p class="scenario-description">
+        {scenario.description}
+        {#if scenario.related}
+          <a class="scenario-related" href="/tally/{scenario.related.id}">
+            Companion scenario: {scenario.related.label} →
+          </a>
+        {/if}
+      </p>
     {/if}
     <div class="header-meta">
       <span>{tally.voteCount} vote{tally.voteCount === 1 ? '' : 's'} cast</span>
@@ -218,6 +225,13 @@ function emptyNoteFor(key: VotingMethodKey): string | undefined {
     line-height: 1.5;
     max-width: 52ch;
     margin: 0.35rem 0 0;
+  }
+
+  .scenario-related {
+    display: inline-block;
+    margin-top: 0.35rem;
+    font-size: 0.82rem;
+    color: var(--accent);
   }
 
   .header-meta {
