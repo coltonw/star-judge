@@ -6,7 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "star-judge-db"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "0593696f-48da-409c-b203-420d71f30b2b"
 
 [vars]
 ENVIRONMENT = "development"
