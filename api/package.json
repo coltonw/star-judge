@@ -2,7 +2,7 @@
   "name": "api",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --env local",
     "build": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy",
     "db:migrate": "wrangler d1 execute star-judge-db --file=src/db/schema.sql",

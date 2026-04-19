@@ -98,7 +98,8 @@ export const METHOD_INFO: Record<VotingMethodKey, MethodInfo> = {
       blurb: 'The un-vetoed STAR runner-up takes the win.',
     },
     sourceFile: 'packages/voting/src/implicit-veto.ts',
-    cardDescription: 'Games with more Hard Passes than the least-vetoed game are disqualified first, then STAR ranks the survivors.',
+    cardDescription:
+      'Games with more Hard Passes than the least-vetoed game are disqualified first, then STAR ranks the survivors.',
     mode: 'star',
     variant: 'iv',
   },

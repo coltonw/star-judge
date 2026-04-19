@@ -9,7 +9,15 @@ database_name = "star-judge-db"
 database_id = "0593696f-48da-409c-b203-420d71f30b2b"
 
 [vars]
-ENVIRONMENT = "development"
+ENVIRONMENT = "production"
 
 # BGG_API_KEY stored as a secret: wrangler secret put BGG_API_KEY
 # CLOUDFLARE_ACCESS_AUD stored as a secret: wrangler secret put CLOUDFLARE_ACCESS_AUD
+
+[env.local.vars]
+ENVIRONMENT = "development"
+
+[[env.local.d1_databases]]
+binding = "DB"
+database_name = "star-judge-db"
+database_id = "00000000-0000-0000-0000-000000000000"

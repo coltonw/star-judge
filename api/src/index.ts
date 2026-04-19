@@ -13,10 +13,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: RequestIdVars }>();
 
 app.use('*', requestId);
 app.use('*', logger());
-const ALLOWED_ORIGINS = new Set([
-  'https://star-judge.pages.dev',
-  'https://star-judge.willcolton.com',
-]);
+const ALLOWED_ORIGINS = new Set(['https://star-judge.pages.dev', 'https://star-judge.willcolton.com']);
 
 app.use(
   '/api/*',
