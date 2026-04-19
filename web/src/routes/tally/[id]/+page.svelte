@@ -5,12 +5,13 @@ import { ApiError, checkVoted, getSessionId, getTally } from '$lib/api';
 import MethodCard from '$lib/components/MethodCard.svelte';
 import { computeConsensus, pickTiebreaker, summarizeMethods } from '$lib/consensus';
 import { METHOD_INFO, orderedPairs } from '$lib/methods';
-import { getMockScenario } from '$lib/mock-scenarios';
+import { getMockScenario, type MockScenario } from '$lib/mock-scenarios';
 
 const isMock = $derived(Number.isNaN(parseInt(page.params.id ?? '', 10)));
 const ballotId = $derived(isMock ? 0 : parseInt(page.params.id ?? '', 10));
 
 let tally = $state<TallyResponse | null>(null);
+let scenario = $state<MockScenario | null>(null);
 let hasVoted = $state(false);
 let loading = $state(true);
 let error = $state('');
@@ -40,9 +41,10 @@ async function fetchTally() {
 $effect(() => {
   if (isMock) {
     try {
-      const scenario = getMockScenario(page.params.id ?? '');
-      if (scenario) {
-        tally = scenario.tally;
+      const found = getMockScenario(page.params.id ?? '');
+      if (found) {
+        scenario = found;
+        tally = found.tally;
       } else {
         error = `Unknown scenario: ${page.params.id ?? ''}`;
       }
@@ -86,7 +88,13 @@ function emptyNoteFor(key: VotingMethodKey): string | undefined {
   <p class="error-msg">{error}</p>
 {:else if tally}
   <div class="page-header">
+    {#if isMock && scenario}
+      <span class="scenario-overline">{scenario.label}</span>
+    {/if}
     <h1>{tally.ballotName}</h1>
+    {#if isMock && scenario}
+      <p class="scenario-description">{scenario.description}</p>
+    {/if}
     <div class="header-meta">
       <span>{tally.voteCount} vote{tally.voteCount === 1 ? '' : 's'} cast</span>
       {#if !isMock && lastUpdated}
@@ -194,6 +202,24 @@ function emptyNoteFor(key: VotingMethodKey): string | undefined {
     text-align: center;
   }
 
+  .scenario-overline {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 0.35rem;
+  }
+
+  .scenario-description {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    max-width: 52ch;
+    margin: 0.35rem 0 0;
+  }
+
   .header-meta {
     display: flex;
     align-items: center;
@@ -201,7 +227,7 @@ function emptyNoteFor(key: VotingMethodKey): string | undefined {
     flex-wrap: wrap;
     color: var(--text-muted);
     font-size: 0.9rem;
-    margin-top: 0.25rem;
+    margin-top: 0.5rem;
   }
 
   .dot {
