@@ -56,7 +56,7 @@ Two hard-won reasons:
 
 ## Auth model
 
-**Admin routes** (`/api/admin/*`) are protected by **Cloudflare Access** — OAuth via Google/GitHub, entirely managed by Cloudflare. Cloudflare validates the JWT and adds a `CF-Access-Jwt-Assertion` header before the request reaches the Worker. The Worker's `requireAdmin` middleware confirms the header is present. In local dev (`ENVIRONMENT=development && !CLOUDFLARE_ACCESS_AUD`), auth is skipped.
+**Admin routes** (`/api/admin/*`) are protected by **Cloudflare Access** — OAuth via Google/GitHub, entirely managed by Cloudflare. Cloudflare validates the JWT and adds a `CF-Access-Jwt-Assertion` header before the request reaches the Worker. The Worker's `requireAdmin` middleware confirms the header is present. In local dev (`ENVIRONMENT=development`), auth is skipped.
 
 **Voter identity** is a UUID in `localStorage`. Honor-system — someone could clear storage and vote again. Double-vote prevention is enforced at the DB level by `UNIQUE(ballot_id, session_id)`. Voters can update their existing vote.
 

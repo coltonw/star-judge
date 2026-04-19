@@ -33,7 +33,7 @@ async function requireAdmin(c: Context<{ Bindings: Bindings; Variables: RequestI
   const jwt = c.req.header('CF-Access-Jwt-Assertion');
 
   // In local dev (wrangler dev), skip auth if ENVIRONMENT is development
-  if (c.env.ENVIRONMENT === 'development' && !c.env.CLOUDFLARE_ACCESS_AUD) {
+  if (c.env.ENVIRONMENT === 'development') {
     return next();
   }
 

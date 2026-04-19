@@ -9,7 +9,6 @@ export default defineConfig({
         d1Databases: ['DB'],
         bindings: {
           ENVIRONMENT: 'development',
-          CLOUDFLARE_ACCESS_AUD: '',
         },
       },
     }),

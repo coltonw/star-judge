@@ -181,7 +181,6 @@ save the application.
 
 ```bash
 cd api
-wrangler secret put CLOUDFLARE_ACCESS_AUD    # paste the AUD from step 3
 wrangler secret put BGG_API_KEY              # optional — blank is fine
 ```
 
