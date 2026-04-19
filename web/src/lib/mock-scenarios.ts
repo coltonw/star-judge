@@ -1818,14 +1818,27 @@ const vetoChangesWinner: MockScenario = {
   },
 };
 
-// ─── Scenario 10: All Four IV Methods Disagree ────────────────────────────────
-const allFourDiffer: MockScenario = {
-  id: 'mock-all-four-differ',
-  label: 'All Four Disagree',
-  description: 'Constructed so every method — MJ, STAR, IV-MJ, IV-STAR — picks a different winner.',
+// ─── Scenario: Maximum Disagreement ──────────────────────────────────────────
+// 7 voters, 5 games, engineered so that five of the eight methods pick five
+// different winners:
+//   MJ        → Azul     (polarizer with 4 excellents gives median=excellent)
+//   STAR      → Brass    (score leader, wins runoff on broad high ratings)
+//   Borda     → Brass    (consistent top-half ranking)
+//   IRV       → Brass    (survives eliminations after redistribution)
+//   Condorcet → Brass    (beats every other game head-to-head)
+//   IV·STAR   → Dominion (Brass & Azul vetoed for hard-passes; Dom beats Catan in runoff)
+//   IV·MJ     → Catan    (same veto, but Catan's median verygood > Dom's good)
+//   Dictator  → Everdell (Sam, the last voter, rates Everdell excellent)
+// Winner distinct count across the 8 methods: 5.
+// Ballots verified by running the real voting functions against synthesized
+// grades before committing.
+const maxDisagree: MockScenario = {
+  id: 'mock-max-disagree',
+  label: 'Maximum Disagreement',
+  description: 'Five different winners across eight methods — polarizer, consensus, vetoes, and a dictator finale.',
   tally: {
     ballotId: 0,
-    ballotName: 'Maximum Disagreement',
+    ballotName: 'Five-Way Split',
     officialMethod: 'ivstar',
     voteCount: 7,
     mj: [
@@ -1840,6 +1853,7 @@ const allFourDiffer: MockScenario = {
       },
       { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
       { id: 'dom', name: 'Dominion', thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(2, 1, 4, 0, 0, 0) },
+      { id: 'ever', name: 'Everdell', thumbnail: '', rank: 5, totalVotes: 7, gradeCounts: gc(1, 0, 0, 0, 0, 6) },
     ],
     star: [
       {
@@ -1880,29 +1894,48 @@ const allFourDiffer: MockScenario = {
         starScore: 20,
         gradeCounts: gc(4, 0, 0, 0, 0, 3),
       },
+      {
+        id: 'ever',
+        name: 'Everdell',
+        thumbnail: '',
+        rank: 5,
+        totalVotes: 7,
+        starScore: 5,
+        gradeCounts: gc(1, 0, 0, 0, 0, 6),
+      },
     ],
     ivmj: [
       { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
       { id: 'dom', name: 'Dominion', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(2, 1, 4, 0, 0, 0) },
       {
+        id: 'azul',
+        name: 'Azul',
+        thumbnail: '',
+        rank: 3,
+        totalVotes: 7,
+        vetoed: true,
+        hardPassCount: 3,
+        gradeCounts: gc(4, 0, 0, 0, 0, 3),
+      },
+      {
         id: 'brass',
         name: 'Brass Birmingham',
         thumbnail: '',
-        rank: 3,
+        rank: 4,
         totalVotes: 7,
         vetoed: true,
         hardPassCount: 1,
         gradeCounts: gc(3, 3, 0, 0, 0, 1),
       },
       {
-        id: 'azul',
-        name: 'Azul',
+        id: 'ever',
+        name: 'Everdell',
         thumbnail: '',
-        rank: 4,
+        rank: 5,
         totalVotes: 7,
         vetoed: true,
-        hardPassCount: 3,
-        gradeCounts: gc(4, 0, 0, 0, 0, 3),
+        hardPassCount: 6,
+        gradeCounts: gc(1, 0, 0, 0, 0, 6),
       },
     ],
     ivstar: [
@@ -1927,10 +1960,21 @@ const allFourDiffer: MockScenario = {
         gradeCounts: gc(0, 4, 3, 0, 0, 0),
       },
       {
+        id: 'azul',
+        name: 'Azul',
+        thumbnail: '',
+        rank: 3,
+        totalVotes: 7,
+        starScore: 20,
+        vetoed: true,
+        hardPassCount: 3,
+        gradeCounts: gc(4, 0, 0, 0, 0, 3),
+      },
+      {
         id: 'brass',
         name: 'Brass Birmingham',
         thumbnail: '',
-        rank: 3,
+        rank: 4,
         totalVotes: 7,
         starScore: 27,
         vetoed: true,
@@ -1938,18 +1982,17 @@ const allFourDiffer: MockScenario = {
         gradeCounts: gc(3, 3, 0, 0, 0, 1),
       },
       {
-        id: 'azul',
-        name: 'Azul',
+        id: 'ever',
+        name: 'Everdell',
         thumbnail: '',
-        rank: 4,
+        rank: 5,
         totalVotes: 7,
-        starScore: 20,
+        starScore: 5,
         vetoed: true,
-        hardPassCount: 3,
-        gradeCounts: gc(4, 0, 0, 0, 0, 3),
+        hardPassCount: 6,
+        gradeCounts: gc(1, 0, 0, 0, 0, 6),
       },
     ],
-    // Borda: Brass wins (consistent E+VG, only 1 HP)
     borda: [
       {
         id: 'brass',
@@ -1957,7 +2000,7 @@ const allFourDiffer: MockScenario = {
         thumbnail: '',
         rank: 1,
         totalVotes: 7,
-        bordaScore: 15,
+        bordaScore: 20,
         gradeCounts: gc(3, 3, 0, 0, 0, 1),
       },
       {
@@ -1966,30 +2009,37 @@ const allFourDiffer: MockScenario = {
         thumbnail: '',
         rank: 2,
         totalVotes: 7,
-        bordaScore: 14,
+        bordaScore: 16.5,
         gradeCounts: gc(2, 1, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: '',
-        rank: 3,
-        totalVotes: 7,
-        bordaScore: 12,
-        gradeCounts: gc(0, 4, 3, 0, 0, 0),
       },
       {
         id: 'azul',
         name: 'Azul',
         thumbnail: '',
-        rank: 4,
+        rank: 3,
         totalVotes: 7,
-        bordaScore: 9,
+        bordaScore: 15,
         gradeCounts: gc(4, 0, 0, 0, 0, 3),
       },
+      {
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: '',
+        rank: 4,
+        totalVotes: 7,
+        bordaScore: 13.5,
+        gradeCounts: gc(0, 4, 3, 0, 0, 0),
+      },
+      {
+        id: 'ever',
+        name: 'Everdell',
+        thumbnail: '',
+        rank: 5,
+        totalVotes: 7,
+        bordaScore: 5,
+        gradeCounts: gc(1, 0, 0, 0, 0, 6),
+      },
     ],
-    // IRV: Catan eliminated first (0 first-choice E votes among non-Azul, non-Brass voters)
-    // then Dom, then Azul, Brass wins
     irv: [
       {
         id: 'brass',
@@ -2005,14 +2055,23 @@ const allFourDiffer: MockScenario = {
         thumbnail: '',
         rank: 2,
         totalVotes: 7,
-        irvElimRound: 3,
+        irvElimRound: 4,
         gradeCounts: gc(4, 0, 0, 0, 0, 3),
+      },
+      {
+        id: 'ever',
+        name: 'Everdell',
+        thumbnail: '',
+        rank: 3,
+        totalVotes: 7,
+        irvElimRound: 3,
+        gradeCounts: gc(1, 0, 0, 0, 0, 6),
       },
       {
         id: 'dom',
         name: 'Dominion',
         thumbnail: '',
-        rank: 3,
+        rank: 4,
         totalVotes: 7,
         irvElimRound: 2,
         gradeCounts: gc(2, 1, 4, 0, 0, 0),
@@ -2021,13 +2080,12 @@ const allFourDiffer: MockScenario = {
         id: 'catan',
         name: 'Catan',
         thumbnail: '',
-        rank: 4,
+        rank: 5,
         totalVotes: 7,
         irvElimRound: 1,
         gradeCounts: gc(0, 4, 3, 0, 0, 0),
       },
     ],
-    // Condorcet: Brass beats all (3E+3VG beats most in head-to-head)
     condorcet: [
       {
         id: 'brass',
@@ -2035,51 +2093,60 @@ const allFourDiffer: MockScenario = {
         thumbnail: '',
         rank: 1,
         totalVotes: 7,
-        pairwiseWins: 3,
+        pairwiseWins: 4,
         gradeCounts: gc(3, 3, 0, 0, 0, 1),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: '',
-        rank: 2,
-        totalVotes: 7,
-        pairwiseWins: 2,
-        gradeCounts: gc(0, 4, 3, 0, 0, 0),
       },
       {
         id: 'dom',
         name: 'Dominion',
         thumbnail: '',
-        rank: 3,
+        rank: 2,
         totalVotes: 7,
-        pairwiseWins: 1,
+        pairwiseWins: 3,
         gradeCounts: gc(2, 1, 4, 0, 0, 0),
       },
       {
         id: 'azul',
         name: 'Azul',
         thumbnail: '',
+        rank: 3,
+        totalVotes: 7,
+        pairwiseWins: 2,
+        gradeCounts: gc(4, 0, 0, 0, 0, 3),
+      },
+      {
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: '',
         rank: 4,
         totalVotes: 7,
+        pairwiseWins: 1,
+        gradeCounts: gc(0, 4, 3, 0, 0, 0),
+      },
+      {
+        id: 'ever',
+        name: 'Everdell',
+        thumbnail: '',
+        rank: 5,
+        totalVotes: 7,
         pairwiseWins: 0,
-        gradeCounts: gc(4, 0, 0, 0, 0, 3),
+        gradeCounts: gc(1, 0, 0, 0, 0, 6),
       },
     ],
     condorcetParadox: false,
-    // Dictator: Sam voted last and picks Dominion
     dictator: d([
-      { id: 'dom', name: 'Dominion', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(2, 1, 4, 0, 0, 0) },
+      { id: 'ever', name: 'Everdell', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(1, 0, 0, 0, 0, 6) },
+      { id: 'dom', name: 'Dominion', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(2, 1, 4, 0, 0, 0) },
+      { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
+      { id: 'azul', name: 'Azul', thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
       {
         id: 'brass',
         name: 'Brass Birmingham',
         thumbnail: '',
-        rank: 2,
+        rank: 5,
         totalVotes: 7,
         gradeCounts: gc(3, 3, 0, 0, 0, 1),
       },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
     ]),
     dictatorName: 'Sam',
   },
@@ -2580,7 +2647,7 @@ export const MOCK_SCENARIOS: MockScenario[] = [
   condorcetCycle,
   runoffFlip,
   bordaConsensus,
-  allFourDiffer,
+  maxDisagree,
   vetoChangesWinner,
   vetoOneSurvivor,
   vetoNodiff,

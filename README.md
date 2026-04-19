@@ -39,7 +39,7 @@ The tool works for picking a board game. The fun part is watching the methods fi
 
 - **Methods Disagree** — MJ picks the polarizing crowd-splitter; STAR picks the consistent crowd-pleaser
 - **STAR Runoff Flip** — the highest-scoring game *loses* the runoff because most voters preferred the runner-up head-to-head
-- **All Four Disagree** — constructed so MJ, STAR, IV·MJ, and IV·STAR each pick a different winner
+- **Maximum Disagreement** — constructed so five of the eight methods each pick a different winner
 - **Condorcet Cycle** — Azul > Brass > Catan > Azul; a genuine rock-paper-scissors deadlock where MJ, STAR, Borda, and IRV still disagree on who should win the tiebreak
 - **Tennessee Capital** — the classic political science example: Memphis has plurality (40%) but *loses every single head-to-head*. Nashville is the Condorcet winner. IRV somehow picks Knoxville. Memphis and Knoxville both get vetoed.
 
