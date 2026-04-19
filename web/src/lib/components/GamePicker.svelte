@@ -13,9 +13,19 @@ let search = $state('');
 let loading = $state(false);
 let retrying = $state(false);
 let error = $state('');
+let manualText = $state('');
+let useManual = $state(false);
 
-let filtered = $derived(allGames.filter((g) => g.name.toLowerCase().includes(search.toLowerCase())));
+let manualCandidates = $derived<Candidate[]>(
+  manualText
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((name, i) => ({ id: `manual-${i}`, name, thumbnail: '' }))
+);
 
+let source = $derived(useManual ? manualCandidates : allGames);
+let filtered = $derived(source.filter((g) => g.name.toLowerCase().includes(search.toLowerCase())));
 let selectedIds = $derived(new Set(selected.map((c) => c.id)));
 
 async function fetchCollection() {
@@ -46,6 +56,16 @@ function toggle(game: Candidate) {
     selected = [...selected, game];
   }
 }
+
+function switchToManual() {
+  useManual = true;
+  selected = [];
+}
+
+function switchToBgg() {
+  useManual = false;
+  selected = [];
+}
 </script>
 
 <div class="picker">
@@ -53,41 +73,119 @@ function toggle(game: Candidate) {
     <p class="status">Loading your BGG collection…</p>
   {:else if retrying}
     <p class="status">BGG is preparing your collection, retrying…</p>
-  {:else if error}
-    <p class="error-msg">{error}</p>
+  {:else if error && !useManual}
+    <div class="error-section">
+      <p class="error-msg">{error}</p>
+      <div class="mode-actions">
+        <button type="button" class="btn btn-ghost btn-sm" onclick={fetchCollection}>Retry BGG</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick={switchToManual}>Enter games manually</button>
+      </div>
+    </div>
   {:else}
-    <div class="search-row">
-      <input
-        type="search"
-        placeholder="Search {allGames.length} games…"
-        bind:value={search}
-      />
-      <span class="count">{selected.length} selected</span>
-    </div>
+    {#if !error}
+      <div class="mode-bar">
+        {#if useManual}
+          <button type="button" class="mode-btn active" disabled>Manual entry</button>
+          <button type="button" class="mode-btn" onclick={switchToBgg}>BGG collection</button>
+        {:else}
+          <button type="button" class="mode-btn active" disabled>BGG collection</button>
+          <button type="button" class="mode-btn" onclick={switchToManual}>Manual entry</button>
+        {/if}
+      </div>
+    {/if}
 
-    <div class="game-grid">
-      {#each filtered as game (game.id)}
-        <button
-          type="button"
-          class="game-tile"
-          class:selected={selectedIds.has(game.id)}
-          onclick={() => toggle(game)}
-        >
-          {#if game.thumbnail}
-            <img src={game.thumbnail} alt={game.name} />
-          {/if}
-          <span class="game-label">{game.name}</span>
-          {#if selectedIds.has(game.id)}
-            <span class="check">✓</span>
-          {/if}
-        </button>
-      {/each}
-    </div>
+    {#if useManual}
+      <div class="manual-entry">
+        <label for="manual-names" class="manual-label">Enter one game name per line:</label>
+        <textarea
+          id="manual-names"
+          placeholder="Wingspan&#10;Terraforming Mars&#10;Ticket to Ride"
+          bind:value={manualText}
+          rows="6"
+        ></textarea>
+      </div>
+    {/if}
+
+    {#if source.length > 0}
+      <div class="search-row">
+        <input
+          type="search"
+          placeholder="Search {source.length} games…"
+          bind:value={search}
+        />
+        <span class="count">{selected.length} selected</span>
+      </div>
+
+      <div class="game-grid">
+        {#each filtered as game (game.id)}
+          <button
+            type="button"
+            class="game-tile"
+            class:selected={selectedIds.has(game.id)}
+            onclick={() => toggle(game)}
+          >
+            {#if game.thumbnail}
+              <img src={game.thumbnail} alt={game.name} />
+            {/if}
+            <span class="game-label">{game.name}</span>
+            {#if selectedIds.has(game.id)}
+              <span class="check">✓</span>
+            {/if}
+          </button>
+        {/each}
+      </div>
+    {:else if useManual}
+      <p class="status">Type game names above to add them.</p>
+    {/if}
   {/if}
 </div>
 
 <style>
   .status { color: var(--text-muted); margin: 1rem 0; }
+
+  .error-section { margin: 1rem 0; }
+  .mode-actions { display: flex; gap: .5rem; margin-top: .75rem; }
+
+  .mode-bar {
+    display: flex;
+    gap: .5rem;
+    margin-bottom: 1rem;
+  }
+  .mode-btn {
+    padding: .3rem .75rem;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text-muted);
+    font-size: .8rem;
+    cursor: pointer;
+  }
+  .mode-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    cursor: default;
+  }
+
+  .manual-entry {
+    margin-bottom: 1rem;
+  }
+  .manual-label {
+    display: block;
+    font-size: .85rem;
+    margin-bottom: .4rem;
+    color: var(--text-muted);
+  }
+  textarea {
+    width: 100%;
+    padding: .5rem .75rem;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: .9rem;
+    resize: vertical;
+    box-sizing: border-box;
+  }
 
   .search-row {
     display: flex;
@@ -156,5 +254,10 @@ function toggle(game: Candidate) {
     font-size: .8rem;
     color: var(--accent);
     font-weight: 700;
+  }
+
+  .btn-sm {
+    padding: .3rem .75rem;
+    font-size: .85rem;
   }
 </style>

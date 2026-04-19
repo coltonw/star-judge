@@ -18,7 +18,7 @@ const ALLOWED_ORIGINS = new Set(['https://star-judge.pages.dev', 'https://star-j
 app.use(
   '/api/*',
   cors({
-    origin: (origin) => (ALLOWED_ORIGINS.has(origin) ? origin : null),
+    origin: (origin) => (ALLOWED_ORIGINS.has(origin) || origin.startsWith('http://localhost:') ? origin : null),
     allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'CF-Access-Jwt-Assertion'],
     credentials: true,
