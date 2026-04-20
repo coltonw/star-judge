@@ -14,14 +14,12 @@ const app = new Hono<{ Bindings: Bindings; Variables: RequestIdVars }>();
 
 app.use('*', requestId);
 app.use('*', logger());
-const ALLOWED_ORIGINS = new Set(['https://star-judge.pages.dev', 'https://star-judge.willcolton.com']);
-
 app.use(
   '/api/*',
   cors({
-    origin: (origin) => (ALLOWED_ORIGINS.has(origin) || origin.startsWith('http://localhost:') ? origin : null),
+    origin: (origin) => (origin.startsWith('http://localhost:') ? origin : null),
     allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'CF-Access-Jwt-Assertion'],
+    allowHeaders: ['Content-Type', 'CF-Access-Jwt-Assertion'],
     credentials: true,
   })
 );
