@@ -10,6 +10,8 @@ database_id = "0593696f-48da-409c-b203-420d71f30b2b"
 
 [vars]
 ENVIRONMENT = "production"
+CF_TEAM_DOMAIN = "willcolton"
+CF_ACCESS_AUD = "ce65d99eaa5cd8c4a9fe2284a069d6d09cf75a9c0d6ff502f41a712eb8f7def8"
 
 # BGG_API_KEY stored as a secret: wrangler secret put BGG_API_KEY
 

@@ -2,6 +2,7 @@ import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import * as jose from 'jose';
 import type { Bindings } from './env';
 import { type RequestIdVars, requestId } from './middleware/request-id';
 import { ballotsRouter } from './routes/ballots';
@@ -25,25 +26,26 @@ app.use(
   })
 );
 
-// Cloudflare Access JWT validation for admin routes.
-// In production, Cloudflare Access injects the CF-Access-Jwt-Assertion header
-// and validates it before the request reaches the Worker. This middleware
-// provides an extra server-side check.
+// Cache JWKS per isolate lifetime to avoid fetching on every request.
+let jwksCache: ReturnType<typeof jose.createRemoteJWKSet> | null = null;
+
 async function requireAdmin(c: Context<{ Bindings: Bindings; Variables: RequestIdVars }>, next: () => Promise<void>) {
-  const jwt = c.req.header('CF-Access-Jwt-Assertion');
+  if (c.env.ENVIRONMENT === 'development') return next();
 
-  // In local dev (wrangler dev), skip auth if ENVIRONMENT is development
-  if (c.env.ENVIRONMENT === 'development') {
-    return next();
-  }
+  const token = c.req.header('CF-Access-Jwt-Assertion');
+  if (!token) return c.json({ error: 'Unauthorized' }, 401);
 
-  if (!jwt) {
+  try {
+    if (!jwksCache) {
+      jwksCache = jose.createRemoteJWKSet(
+        new URL(`https://${c.env.CF_TEAM_DOMAIN}.cloudflareaccess.com/cdn-cgi/access/certs`)
+      );
+    }
+    await jose.jwtVerify(token, jwksCache, { audience: c.env.CF_ACCESS_AUD });
+  } catch {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
-  // When deployed, Cloudflare Access has already validated the JWT.
-  // We trust the header presence as confirmation of a valid session.
-  // For extra hardening, validate the JWT signature against the CF Access certs.
   return next();
 }
 
