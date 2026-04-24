@@ -8,17 +8,29 @@ binding = "DB"
 database_name = "star-judge-db"
 database_id = "0593696f-48da-409c-b203-420d71f30b2b"
 
+[[r2_buckets]]
+binding = "BGG_IMAGES"
+bucket_name = "star-judge-bgg-images"
+
 [vars]
 ENVIRONMENT = "production"
 CF_TEAM_DOMAIN = "willcolton"
 CF_ACCESS_AUD = "ce65d99eaa5cd8c4a9fe2284a069d6d09cf75a9c0d6ff502f41a712eb8f7def8"
+# Public base URL for the BGG_IMAGES bucket. Set this to the r2.dev public URL
+# (e.g. https://pub-XXXX.r2.dev) or a custom hostname bound to the bucket.
+BGG_IMAGES_PUBLIC_BASE = "https://pub-1399a2925c7b46008d653022b46c2960.r2.dev"
 
 # BGG_API_KEY stored as a secret: wrangler secret put BGG_API_KEY
 
 [env.local.vars]
 ENVIRONMENT = "development"
+BGG_IMAGES_PUBLIC_BASE = "http://localhost:8787/_r2/bgg-images"
 
 [[env.local.d1_databases]]
 binding = "DB"
 database_name = "star-judge-db"
 database_id = "00000000-0000-0000-0000-000000000000"
+
+[[env.local.r2_buckets]]
+binding = "BGG_IMAGES"
+bucket_name = "star-judge-bgg-images"

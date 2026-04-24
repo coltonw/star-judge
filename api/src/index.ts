@@ -57,6 +57,21 @@ app.route('/api/bgg', bggRouter);
 app.use('/api/admin/*', requireAdmin);
 app.route('/api/admin/ballots', ballotsRouter);
 
+// Local-dev R2 serving. In production, BGG_IMAGES_PUBLIC_BASE points at the
+// bucket's public hostname and never touches this Worker. In `wrangler dev`
+// there is no public bucket, so this route returns objects from the local
+// R2 emulation.
+app.get('/_r2/bgg-images/*', async (c) => {
+  if (c.env.ENVIRONMENT !== 'development') return c.json({ error: 'Not found' }, 404);
+  const key = c.req.path.replace(/^\/_r2\/bgg-images\//, '');
+  const obj = await c.env.BGG_IMAGES.get(key);
+  if (!obj) return c.json({ error: 'Not found' }, 404);
+  const headers = new Headers();
+  obj.writeHttpMetadata(headers);
+  headers.set('etag', obj.httpEtag);
+  return new Response(obj.body, { headers });
+});
+
 app.get('/', (c) => c.json({ ok: true, service: 'star-judge-api' }));
 
 export default app;

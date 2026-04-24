@@ -1,5 +1,6 @@
 <script lang="ts">
 import '../app.css';
+import PoweredByBgg from '$lib/components/PoweredByBgg.svelte';
 import type { LayoutData } from './$types';
 
 let { data, children }: { data: LayoutData; children: import('svelte').Snippet } = $props();
@@ -36,3 +37,16 @@ let { data, children }: { data: LayoutData; children: import('svelte').Snippet }
 <main class="container">
   {@render children()}
 </main>
+
+<footer class="site-footer">
+  <PoweredByBgg />
+</footer>
+
+<style>
+  .site-footer {
+    display: flex;
+    justify-content: center;
+    padding: 1.5rem 1rem;
+    margin-top: 2rem;
+  }
+</style>

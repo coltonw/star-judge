@@ -3,6 +3,7 @@ import { createBallotSchema, updateBallotSchema } from '@star-judge/shared';
 import { Hono } from 'hono';
 import { createBallot, deleteBallot, getActiveBallot, getBallot, getBallots, updateBallot } from '../db/queries';
 import type { Bindings } from '../env';
+import { normalizeCandidatesForSave } from '../lib/normalize-candidates';
 
 export const ballotsRouter = new Hono<{ Bindings: Bindings }>();
 
@@ -30,7 +31,8 @@ ballotsRouter.get('/:id', async (c) => {
 // POST /api/admin/ballots — create (admin only)
 ballotsRouter.post('/', zValidator('json', createBallotSchema), async (c) => {
   const { name, candidates, officialMethod } = c.req.valid('json');
-  const ballot = await createBallot(c.env.DB, name, candidates, officialMethod);
+  const normalized = await normalizeCandidatesForSave(c.env, candidates);
+  const ballot = await createBallot(c.env.DB, name, normalized, officialMethod);
   return c.json(ballot, 201);
 });
 
@@ -38,7 +40,8 @@ ballotsRouter.post('/', zValidator('json', createBallotSchema), async (c) => {
 ballotsRouter.patch('/:id', zValidator('json', updateBallotSchema), async (c) => {
   const id = parseInt(c.req.param('id'), 10);
   const { name, candidates, active, officialMethod } = c.req.valid('json');
-  const ballot = await updateBallot(c.env.DB, id, name, candidates, active, officialMethod);
+  const normalized = await normalizeCandidatesForSave(c.env, candidates);
+  const ballot = await updateBallot(c.env.DB, id, name, normalized, active, officialMethod);
   if (!ballot) return c.json({ error: 'Not found' }, 404);
   return c.json(ballot);
 });

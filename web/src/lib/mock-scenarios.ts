@@ -1,5 +1,10 @@
 import type { Grade, RankedCandidate, TallyResponse } from '@star-judge/shared';
 
+// Resolves a BGG game id to the R2 public URL used by the rest of the app.
+// Empty string if no base is configured (falls back to text-only tiles).
+const BGG_IMG_BASE = import.meta.env.VITE_BGG_IMAGES_BASE ?? '';
+const thumb = (bggId: string): string => (BGG_IMG_BASE ? `${BGG_IMG_BASE}/bgg/${bggId}.jpg` : '');
+
 export interface MockScenario {
   id: string;
   label: string;
@@ -57,17 +62,45 @@ const diverge: MockScenario = {
     officialMethod: 'ivstar',
     voteCount: 7,
     mj: [
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
-      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(0, 7, 0, 0, 0, 0) },
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(1, 4, 2, 0, 0, 0) },
-      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
-      { id: 'ttr', name: 'Ticket to Ride', thumbnail: '', rank: 5, totalVotes: 7, gradeCounts: gc(0, 0, 4, 3, 0, 0) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
+      {
+        id: 'pandemic',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 2,
+        totalVotes: 7,
+        gradeCounts: gc(0, 7, 0, 0, 0, 0),
+      },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 3,
+        totalVotes: 7,
+        gradeCounts: gc(1, 4, 2, 0, 0, 0),
+      },
+      {
+        id: 'codenames',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 4,
+        totalVotes: 7,
+        gradeCounts: gc(0, 4, 3, 0, 0, 0),
+      },
+      {
+        id: 'ttr',
+        name: 'Ticket to Ride',
+        thumbnail: thumb('9209'),
+        rank: 5,
+        totalVotes: 7,
+        gradeCounts: gc(0, 0, 4, 3, 0, 0),
+      },
     ],
     star: [
       {
         id: 'pandemic',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 1,
         totalVotes: 7,
         starScore: 28,
@@ -75,9 +108,9 @@ const diverge: MockScenario = {
         gradeCounts: gc(0, 7, 0, 0, 0, 0),
       },
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 2,
         totalVotes: 7,
         starScore: 27,
@@ -87,7 +120,7 @@ const diverge: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 7,
         starScore: 25,
@@ -96,7 +129,7 @@ const diverge: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 4,
         totalVotes: 7,
         starScore: 20,
@@ -105,7 +138,7 @@ const diverge: MockScenario = {
       {
         id: 'ttr',
         name: 'Ticket to Ride',
-        thumbnail: '',
+        thumbnail: thumb('9209'),
         rank: 5,
         totalVotes: 7,
         starScore: 18,
@@ -113,14 +146,42 @@ const diverge: MockScenario = {
       },
     ],
     ivmj: [
-      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(0, 7, 0, 0, 0, 0) },
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(1, 4, 2, 0, 0, 0) },
-      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
-      { id: 'ttr', name: 'Ticket to Ride', thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(0, 0, 4, 3, 0, 0) },
+      {
+        id: 'pandemic',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 1,
+        totalVotes: 7,
+        gradeCounts: gc(0, 7, 0, 0, 0, 0),
+      },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 2,
+        totalVotes: 7,
+        gradeCounts: gc(1, 4, 2, 0, 0, 0),
+      },
+      {
+        id: 'codenames',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 3,
+        totalVotes: 7,
+        gradeCounts: gc(0, 4, 3, 0, 0, 0),
+      },
+      {
+        id: 'ttr',
+        name: 'Ticket to Ride',
+        thumbnail: thumb('9209'),
+        rank: 4,
+        totalVotes: 7,
+        gradeCounts: gc(0, 0, 4, 3, 0, 0),
+      },
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 5,
         totalVotes: 7,
         vetoed: true,
@@ -132,7 +193,7 @@ const diverge: MockScenario = {
       {
         id: 'pandemic',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 1,
         totalVotes: 7,
         starScore: 28,
@@ -140,9 +201,9 @@ const diverge: MockScenario = {
         gradeCounts: gc(0, 7, 0, 0, 0, 0),
       },
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 2,
         totalVotes: 7,
         starScore: 27,
@@ -152,7 +213,7 @@ const diverge: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 7,
         starScore: 25,
@@ -161,7 +222,7 @@ const diverge: MockScenario = {
       {
         id: 'ttr',
         name: 'Ticket to Ride',
-        thumbnail: '',
+        thumbnail: thumb('9209'),
         rank: 4,
         totalVotes: 7,
         starScore: 18,
@@ -170,7 +231,7 @@ const diverge: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 5,
         totalVotes: 7,
         starScore: 20,
@@ -184,16 +245,16 @@ const diverge: MockScenario = {
       {
         id: 'pandemic',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 1,
         totalVotes: 7,
         bordaScore: 21,
         gradeCounts: gc(0, 7, 0, 0, 0, 0),
       },
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 2,
         totalVotes: 7,
         bordaScore: 20,
@@ -202,7 +263,7 @@ const diverge: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 7,
         bordaScore: 18,
@@ -211,7 +272,7 @@ const diverge: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 4,
         totalVotes: 7,
         bordaScore: 16,
@@ -220,29 +281,36 @@ const diverge: MockScenario = {
       {
         id: 'ttr',
         name: 'Ticket to Ride',
-        thumbnail: '',
+        thumbnail: thumb('9209'),
         rank: 5,
         totalVotes: 7,
         bordaScore: 11,
         gradeCounts: gc(0, 0, 4, 3, 0, 0),
       },
     ],
-    // IRV: TTR → Codenames → Wingspan → Catan → Pandemic wins
+    // IRV: TTR → Codenames → Harmonies → Catan → Pandemic wins
     irv: [
-      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(0, 7, 0, 0, 0, 0) },
+      {
+        id: 'pandemic',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 1,
+        totalVotes: 7,
+        gradeCounts: gc(0, 7, 0, 0, 0, 0),
+      },
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 7,
         irvElimRound: 4,
         gradeCounts: gc(4, 0, 0, 0, 0, 3),
       },
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 3,
         totalVotes: 7,
         irvElimRound: 3,
@@ -251,7 +319,7 @@ const diverge: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 4,
         totalVotes: 7,
         irvElimRound: 2,
@@ -260,7 +328,7 @@ const diverge: MockScenario = {
       {
         id: 'ttr',
         name: 'Ticket to Ride',
-        thumbnail: '',
+        thumbnail: thumb('9209'),
         rank: 5,
         totalVotes: 7,
         irvElimRound: 1,
@@ -272,16 +340,16 @@ const diverge: MockScenario = {
       {
         id: 'pandemic',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 1,
         totalVotes: 7,
         pairwiseWins: 4,
         gradeCounts: gc(0, 7, 0, 0, 0, 0),
       },
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 2,
         totalVotes: 7,
         pairwiseWins: 3,
@@ -290,7 +358,7 @@ const diverge: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 7,
         pairwiseWins: 2,
@@ -299,7 +367,7 @@ const diverge: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 4,
         totalVotes: 7,
         pairwiseWins: 1,
@@ -308,7 +376,7 @@ const diverge: MockScenario = {
       {
         id: 'ttr',
         name: 'Ticket to Ride',
-        thumbnail: '',
+        thumbnail: thumb('9209'),
         rank: 5,
         totalVotes: 7,
         pairwiseWins: 0,
@@ -318,11 +386,39 @@ const diverge: MockScenario = {
     condorcetParadox: false,
     // Dictator: Sam voted last and loves Catan despite the haters
     dictator: d([
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
-      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(0, 7, 0, 0, 0, 0) },
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(1, 4, 2, 0, 0, 0) },
-      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
-      { id: 'ttr', name: 'Ticket to Ride', thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(0, 0, 4, 3, 0, 0) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
+      {
+        id: 'pandemic',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 2,
+        totalVotes: 7,
+        gradeCounts: gc(0, 7, 0, 0, 0, 0),
+      },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 2,
+        totalVotes: 7,
+        gradeCounts: gc(1, 4, 2, 0, 0, 0),
+      },
+      {
+        id: 'codenames',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 4,
+        totalVotes: 7,
+        gradeCounts: gc(0, 4, 3, 0, 0, 0),
+      },
+      {
+        id: 'ttr',
+        name: 'Ticket to Ride',
+        thumbnail: thumb('9209'),
+        rank: 4,
+        totalVotes: 7,
+        gradeCounts: gc(0, 0, 4, 3, 0, 0),
+      },
     ]),
     dictatorName: 'Sam',
   },
@@ -332,22 +428,36 @@ const diverge: MockScenario = {
 const agree: MockScenario = {
   id: 'mock-agree',
   label: 'Methods Agree',
-  description: 'The baseline case: when voters agree, all eight methods agree. Everyone loves Wingspan.',
+  description: 'The baseline case: when voters agree, all eight methods agree. Everyone loves Harmonies.',
   tally: {
     ballotId: 0,
     ballotName: 'Easy Night In',
     officialMethod: 'ivstar',
     voteCount: 5,
     mj: [
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(4, 1, 0, 0, 0, 0) },
-      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(1, 2, 2, 0, 0, 0) },
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0, 1, 2, 1, 1, 0) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 5,
+        gradeCounts: gc(4, 1, 0, 0, 0, 0),
+      },
+      {
+        id: 'codenames',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 2,
+        totalVotes: 5,
+        gradeCounts: gc(1, 2, 2, 0, 0, 0),
+      },
+      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 1, 2, 1, 1, 0) },
     ],
     star: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 5,
         starScore: 24,
@@ -357,7 +467,7 @@ const agree: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 2,
         totalVotes: 5,
         starScore: 17,
@@ -365,9 +475,9 @@ const agree: MockScenario = {
         gradeCounts: gc(1, 2, 2, 0, 0, 0),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 5,
         starScore: 13,
@@ -375,15 +485,29 @@ const agree: MockScenario = {
       },
     ],
     ivmj: [
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(4, 1, 0, 0, 0, 0) },
-      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(1, 2, 2, 0, 0, 0) },
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0, 1, 2, 1, 1, 0) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 5,
+        gradeCounts: gc(4, 1, 0, 0, 0, 0),
+      },
+      {
+        id: 'codenames',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 2,
+        totalVotes: 5,
+        gradeCounts: gc(1, 2, 2, 0, 0, 0),
+      },
+      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 1, 2, 1, 1, 0) },
     ],
     ivstar: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 5,
         starScore: 24,
@@ -393,7 +517,7 @@ const agree: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 2,
         totalVotes: 5,
         starScore: 17,
@@ -401,9 +525,9 @@ const agree: MockScenario = {
         gradeCounts: gc(1, 2, 2, 0, 0, 0),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 5,
         starScore: 13,
@@ -412,9 +536,9 @@ const agree: MockScenario = {
     ],
     borda: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 5,
         bordaScore: 9,
@@ -423,16 +547,16 @@ const agree: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 2,
         totalVotes: 5,
         bordaScore: 6,
         gradeCounts: gc(1, 2, 2, 0, 0, 0),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 5,
         bordaScore: 3,
@@ -440,20 +564,27 @@ const agree: MockScenario = {
       },
     ],
     irv: [
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(4, 1, 0, 0, 0, 0) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 5,
+        gradeCounts: gc(4, 1, 0, 0, 0, 0),
+      },
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 2,
         totalVotes: 5,
         irvElimRound: 2,
         gradeCounts: gc(1, 2, 2, 0, 0, 0),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 5,
         irvElimRound: 1,
@@ -462,9 +593,9 @@ const agree: MockScenario = {
     ],
     condorcet: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 5,
         pairwiseWins: 2,
@@ -473,16 +604,16 @@ const agree: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 2,
         totalVotes: 5,
         pairwiseWins: 1,
         gradeCounts: gc(1, 2, 2, 0, 0, 0),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 5,
         pairwiseWins: 0,
@@ -491,16 +622,30 @@ const agree: MockScenario = {
     ],
     condorcetParadox: false,
     dictator: d([
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(4, 1, 0, 0, 0, 0) },
-      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(1, 2, 2, 0, 0, 0) },
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0, 1, 2, 1, 1, 0) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 5,
+        gradeCounts: gc(4, 1, 0, 0, 0, 0),
+      },
+      {
+        id: 'codenames',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 2,
+        totalVotes: 5,
+        gradeCounts: gc(1, 2, 2, 0, 0, 0),
+      },
+      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 1, 2, 1, 1, 0) },
     ]),
     dictatorName: 'Pat',
   },
 };
 
 // ─── Scenario: Borda's Broad-Support Winner ──────────────────────────────────
-// Two rival factions (euro-gamers love Catan, epic-gamers love Twilight Imperium)
+// Two rival factions (euro-gamers love Catan, epic-gamers love Barrage)
 // polarize around their favorite and give the rival a hard pass. Codenames is
 // everyone's calm second choice. STAR (score=19), MJ (median=verygood), and IRV
 // all pick the polarizer Catan. But Borda — which rewards per-ballot *position*
@@ -518,12 +663,19 @@ const bordaConsensus: MockScenario = {
     officialMethod: 'borda',
     voteCount: 7,
     mj: [
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3, 1, 0, 0, 0, 3) },
-      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(1, 0, 0, 0, 6, 0) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(3, 1, 0, 0, 0, 3) },
       {
-        id: 'ti4',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'codenames',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 2,
+        totalVotes: 7,
+        gradeCounts: gc(1, 0, 0, 0, 6, 0),
+      },
+      {
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 3,
         totalVotes: 7,
         gradeCounts: gc(3, 0, 0, 0, 0, 4),
@@ -533,7 +685,7 @@ const bordaConsensus: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 1,
         totalVotes: 7,
         starScore: 19,
@@ -541,9 +693,9 @@ const bordaConsensus: MockScenario = {
         gradeCounts: gc(3, 1, 0, 0, 0, 3),
       },
       {
-        id: 'ti4',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 2,
         totalVotes: 7,
         starScore: 15,
@@ -553,7 +705,7 @@ const bordaConsensus: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 7,
         starScore: 11,
@@ -564,7 +716,7 @@ const bordaConsensus: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 1,
         totalVotes: 7,
         gradeCounts: gc(1, 0, 0, 0, 6, 0),
@@ -572,7 +724,7 @@ const bordaConsensus: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 7,
         vetoed: true,
@@ -580,9 +732,9 @@ const bordaConsensus: MockScenario = {
         gradeCounts: gc(3, 1, 0, 0, 0, 3),
       },
       {
-        id: 'ti4',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 3,
         totalVotes: 7,
         vetoed: true,
@@ -594,7 +746,7 @@ const bordaConsensus: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 1,
         totalVotes: 7,
         starScore: 11,
@@ -604,7 +756,7 @@ const bordaConsensus: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 7,
         starScore: 19,
@@ -613,9 +765,9 @@ const bordaConsensus: MockScenario = {
         gradeCounts: gc(3, 1, 0, 0, 0, 3),
       },
       {
-        id: 'ti4',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 3,
         totalVotes: 7,
         starScore: 15,
@@ -628,7 +780,7 @@ const bordaConsensus: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 1,
         totalVotes: 7,
         bordaScore: 8,
@@ -637,16 +789,16 @@ const bordaConsensus: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 7,
         bordaScore: 7,
         gradeCounts: gc(3, 1, 0, 0, 0, 3),
       },
       {
-        id: 'ti4',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 3,
         totalVotes: 7,
         bordaScore: 6,
@@ -654,11 +806,11 @@ const bordaConsensus: MockScenario = {
       },
     ],
     irv: [
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3, 1, 0, 0, 0, 3) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(3, 1, 0, 0, 0, 3) },
       {
-        id: 'ti4',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 2,
         totalVotes: 7,
         irvElimRound: 2,
@@ -667,7 +819,7 @@ const bordaConsensus: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 7,
         irvElimRound: 1,
@@ -678,7 +830,7 @@ const bordaConsensus: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 1,
         totalVotes: 7,
         pairwiseWins: 2,
@@ -687,16 +839,16 @@ const bordaConsensus: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 7,
         pairwiseWins: 1,
         gradeCounts: gc(3, 1, 0, 0, 0, 3),
       },
       {
-        id: 'ti4',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 3,
         totalVotes: 7,
         pairwiseWins: 0,
@@ -705,12 +857,19 @@ const bordaConsensus: MockScenario = {
     ],
     condorcetParadox: false,
     dictator: d([
-      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(1, 0, 0, 0, 6, 0) },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(3, 1, 0, 0, 0, 3) },
       {
-        id: 'ti4',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'codenames',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 1,
+        totalVotes: 7,
+        gradeCounts: gc(1, 0, 0, 0, 6, 0),
+      },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 2, totalVotes: 7, gradeCounts: gc(3, 1, 0, 0, 0, 3) },
+      {
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 3,
         totalVotes: 7,
         gradeCounts: gc(3, 0, 0, 0, 0, 4),
@@ -755,15 +914,29 @@ const tie: MockScenario = {
     officialMethod: 'ivstar',
     voteCount: 7,
     mj: [
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
-      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0, 1, 3, 3, 0, 0) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
+      {
+        id: 'pandemic',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 1,
+        totalVotes: 7,
+        gradeCounts: gc(3, 2, 2, 0, 0, 0),
+      },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 3,
+        totalVotes: 7,
+        gradeCounts: gc(0, 1, 3, 3, 0, 0),
+      },
     ],
     star: [
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 1,
         totalVotes: 7,
         starScore: 29,
@@ -773,7 +946,7 @@ const tie: MockScenario = {
       {
         id: 'pandemic',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 1,
         totalVotes: 7,
         starScore: 29,
@@ -781,9 +954,9 @@ const tie: MockScenario = {
         gradeCounts: gc(3, 2, 2, 0, 0, 0),
       },
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 3,
         totalVotes: 7,
         starScore: 15,
@@ -791,15 +964,29 @@ const tie: MockScenario = {
       },
     ],
     ivmj: [
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
-      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0, 1, 3, 3, 0, 0) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
+      {
+        id: 'pandemic',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 1,
+        totalVotes: 7,
+        gradeCounts: gc(3, 2, 2, 0, 0, 0),
+      },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 3,
+        totalVotes: 7,
+        gradeCounts: gc(0, 1, 3, 3, 0, 0),
+      },
     ],
     ivstar: [
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 1,
         totalVotes: 7,
         starScore: 29,
@@ -809,7 +996,7 @@ const tie: MockScenario = {
       {
         id: 'pandemic',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 1,
         totalVotes: 7,
         starScore: 29,
@@ -817,9 +1004,9 @@ const tie: MockScenario = {
         gradeCounts: gc(3, 2, 2, 0, 0, 0),
       },
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 3,
         totalVotes: 7,
         starScore: 15,
@@ -830,7 +1017,7 @@ const tie: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 1,
         totalVotes: 7,
         bordaScore: 11,
@@ -839,16 +1026,16 @@ const tie: MockScenario = {
       {
         id: 'pandemic',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 1,
         totalVotes: 7,
         bordaScore: 11,
         gradeCounts: gc(3, 2, 2, 0, 0, 0),
       },
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 3,
         totalVotes: 7,
         bordaScore: 6,
@@ -856,12 +1043,19 @@ const tie: MockScenario = {
       },
     ],
     irv: [
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
-      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'pandemic',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 1,
+        totalVotes: 7,
+        gradeCounts: gc(3, 2, 2, 0, 0, 0),
+      },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 3,
         totalVotes: 7,
         irvElimRound: 1,
@@ -872,7 +1066,7 @@ const tie: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 1,
         totalVotes: 7,
         pairwiseWins: 1,
@@ -881,16 +1075,16 @@ const tie: MockScenario = {
       {
         id: 'pandemic',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 1,
         totalVotes: 7,
         pairwiseWins: 1,
         gradeCounts: gc(3, 2, 2, 0, 0, 0),
       },
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 3,
         totalVotes: 7,
         pairwiseWins: 0,
@@ -899,9 +1093,23 @@ const tie: MockScenario = {
     ],
     condorcetParadox: false,
     dictator: d([
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
-      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0, 1, 3, 3, 0, 0) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
+      {
+        id: 'pandemic',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 2,
+        totalVotes: 7,
+        gradeCounts: gc(3, 2, 2, 0, 0, 0),
+      },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 3,
+        totalVotes: 7,
+        gradeCounts: gc(0, 1, 3, 3, 0, 0),
+      },
     ]),
     dictatorName: 'Jordan',
   },
@@ -921,22 +1129,36 @@ const runoffFlip: MockScenario = {
     officialMethod: 'star',
     voteCount: 7,
     mj: [
-      { id: 'terra', name: 'Terra Mystica', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(0, 5, 0, 0, 0, 2) },
+      {
+        id: 'terra',
+        name: 'Terra Mystica',
+        thumbnail: thumb('120677'),
+        rank: 1,
+        totalVotes: 7,
+        gradeCounts: gc(0, 5, 0, 0, 0, 2),
+      },
       {
         id: 'cosmic',
         name: 'Cosmic Encounter',
-        thumbnail: '',
+        thumbnail: thumb('39463'),
         rank: 2,
         totalVotes: 7,
         gradeCounts: gc(2, 0, 5, 0, 0, 0),
       },
-      { id: 'chess', name: 'Chess', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0, 0, 3, 4, 0, 0) },
+      {
+        id: 'powergrid',
+        name: 'Power Grid',
+        thumbnail: thumb('2651'),
+        rank: 3,
+        totalVotes: 7,
+        gradeCounts: gc(0, 0, 3, 4, 0, 0),
+      },
     ],
     star: [
       {
         id: 'terra',
         name: 'Terra Mystica',
-        thumbnail: '',
+        thumbnail: thumb('120677'),
         rank: 1,
         totalVotes: 7,
         starScore: 20,
@@ -946,7 +1168,7 @@ const runoffFlip: MockScenario = {
       {
         id: 'cosmic',
         name: 'Cosmic Encounter',
-        thumbnail: '',
+        thumbnail: thumb('39463'),
         rank: 2,
         totalVotes: 7,
         starScore: 25,
@@ -954,9 +1176,9 @@ const runoffFlip: MockScenario = {
         gradeCounts: gc(2, 0, 5, 0, 0, 0),
       },
       {
-        id: 'chess',
-        name: 'Chess',
-        thumbnail: '',
+        id: 'powergrid',
+        name: 'Power Grid',
+        thumbnail: thumb('2651'),
         rank: 3,
         totalVotes: 7,
         starScore: 17,
@@ -967,16 +1189,23 @@ const runoffFlip: MockScenario = {
       {
         id: 'cosmic',
         name: 'Cosmic Encounter',
-        thumbnail: '',
+        thumbnail: thumb('39463'),
         rank: 1,
         totalVotes: 7,
         gradeCounts: gc(2, 0, 5, 0, 0, 0),
       },
-      { id: 'chess', name: 'Chess', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(0, 0, 3, 4, 0, 0) },
+      {
+        id: 'powergrid',
+        name: 'Power Grid',
+        thumbnail: thumb('2651'),
+        rank: 2,
+        totalVotes: 7,
+        gradeCounts: gc(0, 0, 3, 4, 0, 0),
+      },
       {
         id: 'terra',
         name: 'Terra Mystica',
-        thumbnail: '',
+        thumbnail: thumb('120677'),
         rank: 3,
         totalVotes: 7,
         vetoed: true,
@@ -988,7 +1217,7 @@ const runoffFlip: MockScenario = {
       {
         id: 'cosmic',
         name: 'Cosmic Encounter',
-        thumbnail: '',
+        thumbnail: thumb('39463'),
         rank: 1,
         totalVotes: 7,
         starScore: 25,
@@ -996,9 +1225,9 @@ const runoffFlip: MockScenario = {
         gradeCounts: gc(2, 0, 5, 0, 0, 0),
       },
       {
-        id: 'chess',
-        name: 'Chess',
-        thumbnail: '',
+        id: 'powergrid',
+        name: 'Power Grid',
+        thumbnail: thumb('2651'),
         rank: 2,
         totalVotes: 7,
         starScore: 17,
@@ -1008,7 +1237,7 @@ const runoffFlip: MockScenario = {
       {
         id: 'terra',
         name: 'Terra Mystica',
-        thumbnail: '',
+        thumbnail: thumb('120677'),
         rank: 3,
         totalVotes: 7,
         starScore: 20,
@@ -1022,7 +1251,7 @@ const runoffFlip: MockScenario = {
       {
         id: 'terra',
         name: 'Terra Mystica',
-        thumbnail: '',
+        thumbnail: thumb('120677'),
         rank: 1,
         totalVotes: 7,
         bordaScore: 10,
@@ -1031,38 +1260,45 @@ const runoffFlip: MockScenario = {
       {
         id: 'cosmic',
         name: 'Cosmic Encounter',
-        thumbnail: '',
+        thumbnail: thumb('39463'),
         rank: 2,
         totalVotes: 7,
         bordaScore: 9,
         gradeCounts: gc(2, 0, 5, 0, 0, 0),
       },
       {
-        id: 'chess',
-        name: 'Chess',
-        thumbnail: '',
+        id: 'powergrid',
+        name: 'Power Grid',
+        thumbnail: thumb('2651'),
         rank: 3,
         totalVotes: 7,
         bordaScore: 5,
         gradeCounts: gc(0, 0, 3, 4, 0, 0),
       },
     ],
-    // IRV: Chess elim round 1, then Terra beats Cosmic (Terra has 5 first-choice VG voters)
+    // IRV: Power Grid elim round 1, then Terra beats Cosmic (Terra has 5 first-choice VG voters)
     irv: [
-      { id: 'terra', name: 'Terra Mystica', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(0, 5, 0, 0, 0, 2) },
+      {
+        id: 'terra',
+        name: 'Terra Mystica',
+        thumbnail: thumb('120677'),
+        rank: 1,
+        totalVotes: 7,
+        gradeCounts: gc(0, 5, 0, 0, 0, 2),
+      },
       {
         id: 'cosmic',
         name: 'Cosmic Encounter',
-        thumbnail: '',
+        thumbnail: thumb('39463'),
         rank: 2,
         totalVotes: 7,
         irvElimRound: 2,
         gradeCounts: gc(2, 0, 5, 0, 0, 0),
       },
       {
-        id: 'chess',
-        name: 'Chess',
-        thumbnail: '',
+        id: 'powergrid',
+        name: 'Power Grid',
+        thumbnail: thumb('2651'),
         rank: 3,
         totalVotes: 7,
         irvElimRound: 1,
@@ -1074,7 +1310,7 @@ const runoffFlip: MockScenario = {
       {
         id: 'terra',
         name: 'Terra Mystica',
-        thumbnail: '',
+        thumbnail: thumb('120677'),
         rank: 1,
         totalVotes: 7,
         pairwiseWins: 2,
@@ -1083,16 +1319,16 @@ const runoffFlip: MockScenario = {
       {
         id: 'cosmic',
         name: 'Cosmic Encounter',
-        thumbnail: '',
+        thumbnail: thumb('39463'),
         rank: 2,
         totalVotes: 7,
         pairwiseWins: 1,
         gradeCounts: gc(2, 0, 5, 0, 0, 0),
       },
       {
-        id: 'chess',
-        name: 'Chess',
-        thumbnail: '',
+        id: 'powergrid',
+        name: 'Power Grid',
+        thumbnail: thumb('2651'),
         rank: 3,
         totalVotes: 7,
         pairwiseWins: 0,
@@ -1105,13 +1341,27 @@ const runoffFlip: MockScenario = {
       {
         id: 'cosmic',
         name: 'Cosmic Encounter',
-        thumbnail: '',
+        thumbnail: thumb('39463'),
         rank: 1,
         totalVotes: 7,
         gradeCounts: gc(2, 0, 5, 0, 0, 0),
       },
-      { id: 'terra', name: 'Terra Mystica', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(0, 5, 0, 0, 0, 2) },
-      { id: 'chess', name: 'Chess', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0, 0, 3, 4, 0, 0) },
+      {
+        id: 'terra',
+        name: 'Terra Mystica',
+        thumbnail: thumb('120677'),
+        rank: 2,
+        totalVotes: 7,
+        gradeCounts: gc(0, 5, 0, 0, 0, 2),
+      },
+      {
+        id: 'powergrid',
+        name: 'Power Grid',
+        thumbnail: thumb('2651'),
+        rank: 3,
+        totalVotes: 7,
+        gradeCounts: gc(0, 0, 3, 4, 0, 0),
+      },
     ]),
     dictatorName: 'Jordan',
   },
@@ -1128,15 +1378,29 @@ const oneVote: MockScenario = {
     officialMethod: 'ivstar',
     voteCount: 1,
     mj: [
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 1, gradeCounts: gc(1, 0, 0, 0, 0, 0) },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 2, totalVotes: 1, gradeCounts: gc(0, 0, 1, 0, 0, 0) },
-      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 1, gradeCounts: gc(0, 0, 0, 0, 1, 0) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 1,
+        gradeCounts: gc(1, 0, 0, 0, 0, 0),
+      },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 2, totalVotes: 1, gradeCounts: gc(0, 0, 1, 0, 0, 0) },
+      {
+        id: 'codenames',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 3,
+        totalVotes: 1,
+        gradeCounts: gc(0, 0, 0, 0, 1, 0),
+      },
     ],
     star: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 1,
         starScore: 5,
@@ -1146,7 +1410,7 @@ const oneVote: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 1,
         starScore: 3,
@@ -1156,7 +1420,7 @@ const oneVote: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 1,
         starScore: 1,
@@ -1164,15 +1428,29 @@ const oneVote: MockScenario = {
       },
     ],
     ivmj: [
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 1, gradeCounts: gc(1, 0, 0, 0, 0, 0) },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 2, totalVotes: 1, gradeCounts: gc(0, 0, 1, 0, 0, 0) },
-      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 1, gradeCounts: gc(0, 0, 0, 0, 1, 0) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 1,
+        gradeCounts: gc(1, 0, 0, 0, 0, 0),
+      },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 2, totalVotes: 1, gradeCounts: gc(0, 0, 1, 0, 0, 0) },
+      {
+        id: 'codenames',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 3,
+        totalVotes: 1,
+        gradeCounts: gc(0, 0, 0, 0, 1, 0),
+      },
     ],
     ivstar: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 1,
         starScore: 5,
@@ -1182,7 +1460,7 @@ const oneVote: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 1,
         starScore: 3,
@@ -1192,7 +1470,7 @@ const oneVote: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 1,
         starScore: 1,
@@ -1201,9 +1479,9 @@ const oneVote: MockScenario = {
     ],
     borda: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 1,
         bordaScore: 2,
@@ -1212,7 +1490,7 @@ const oneVote: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 1,
         bordaScore: 1,
@@ -1221,7 +1499,7 @@ const oneVote: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 1,
         bordaScore: 0,
@@ -1229,11 +1507,18 @@ const oneVote: MockScenario = {
       },
     ],
     irv: [
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 1, gradeCounts: gc(1, 0, 0, 0, 0, 0) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 1,
+        gradeCounts: gc(1, 0, 0, 0, 0, 0),
+      },
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 1,
         irvElimRound: 2,
@@ -1242,7 +1527,7 @@ const oneVote: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 1,
         irvElimRound: 1,
@@ -1251,9 +1536,9 @@ const oneVote: MockScenario = {
     ],
     condorcet: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 1,
         pairwiseWins: 2,
@@ -1262,7 +1547,7 @@ const oneVote: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 1,
         pairwiseWins: 1,
@@ -1271,7 +1556,7 @@ const oneVote: MockScenario = {
       {
         id: 'codenames',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 1,
         pairwiseWins: 0,
@@ -1281,9 +1566,23 @@ const oneVote: MockScenario = {
     condorcetParadox: false,
     // The only voter is the dictator by default
     dictator: d([
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 1, gradeCounts: gc(1, 0, 0, 0, 0, 0) },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 2, totalVotes: 1, gradeCounts: gc(0, 0, 1, 0, 0, 0) },
-      { id: 'codenames', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 1, gradeCounts: gc(0, 0, 0, 0, 1, 0) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 1,
+        gradeCounts: gc(1, 0, 0, 0, 0, 0),
+      },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 2, totalVotes: 1, gradeCounts: gc(0, 0, 1, 0, 0, 0) },
+      {
+        id: 'codenames',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 3,
+        totalVotes: 1,
+        gradeCounts: gc(0, 0, 0, 0, 1, 0),
+      },
     ]),
     dictatorName: 'Riley',
   },
@@ -1301,15 +1600,22 @@ const vetoNodiff: MockScenario = {
     officialMethod: 'ivmj',
     voteCount: 5,
     mj: [
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(3, 1, 0, 0, 0, 1) },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(0, 3, 1, 0, 0, 1) },
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0, 0, 2, 2, 0, 1) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 5,
+        gradeCounts: gc(3, 1, 0, 0, 0, 1),
+      },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 2, totalVotes: 5, gradeCounts: gc(0, 3, 1, 0, 0, 1) },
+      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 0, 2, 2, 0, 1) },
     ],
     star: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 5,
         starScore: 19,
@@ -1319,7 +1625,7 @@ const vetoNodiff: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 5,
         starScore: 15,
@@ -1327,9 +1633,9 @@ const vetoNodiff: MockScenario = {
         gradeCounts: gc(0, 3, 1, 0, 0, 1),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 5,
         starScore: 10,
@@ -1337,15 +1643,22 @@ const vetoNodiff: MockScenario = {
       },
     ],
     ivmj: [
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(3, 1, 0, 0, 0, 1) },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(0, 3, 1, 0, 0, 1) },
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0, 0, 2, 2, 0, 1) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 5,
+        gradeCounts: gc(3, 1, 0, 0, 0, 1),
+      },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 2, totalVotes: 5, gradeCounts: gc(0, 3, 1, 0, 0, 1) },
+      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 0, 2, 2, 0, 1) },
     ],
     ivstar: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 5,
         starScore: 19,
@@ -1355,7 +1668,7 @@ const vetoNodiff: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 5,
         starScore: 15,
@@ -1363,9 +1676,9 @@ const vetoNodiff: MockScenario = {
         gradeCounts: gc(0, 3, 1, 0, 0, 1),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 5,
         starScore: 10,
@@ -1374,9 +1687,9 @@ const vetoNodiff: MockScenario = {
     ],
     borda: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 5,
         bordaScore: 8,
@@ -1385,16 +1698,16 @@ const vetoNodiff: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 5,
         bordaScore: 6,
         gradeCounts: gc(0, 3, 1, 0, 0, 1),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 5,
         bordaScore: 3,
@@ -1402,20 +1715,27 @@ const vetoNodiff: MockScenario = {
       },
     ],
     irv: [
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(3, 1, 0, 0, 0, 1) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 5,
+        gradeCounts: gc(3, 1, 0, 0, 0, 1),
+      },
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 5,
         irvElimRound: 2,
         gradeCounts: gc(0, 3, 1, 0, 0, 1),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 5,
         irvElimRound: 1,
@@ -1424,9 +1744,9 @@ const vetoNodiff: MockScenario = {
     ],
     condorcet: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 5,
         pairwiseWins: 2,
@@ -1435,16 +1755,16 @@ const vetoNodiff: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 5,
         pairwiseWins: 1,
         gradeCounts: gc(0, 3, 1, 0, 0, 1),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 5,
         pairwiseWins: 0,
@@ -1453,9 +1773,16 @@ const vetoNodiff: MockScenario = {
     ],
     condorcetParadox: false,
     dictator: d([
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(0, 3, 1, 0, 0, 1) },
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(3, 1, 0, 0, 0, 1) },
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0, 0, 2, 2, 0, 1) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 5, gradeCounts: gc(0, 3, 1, 0, 0, 1) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 2,
+        totalVotes: 5,
+        gradeCounts: gc(3, 1, 0, 0, 0, 1),
+      },
+      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 0, 2, 2, 0, 1) },
     ]),
     dictatorName: 'Sam',
   },
@@ -1472,15 +1799,29 @@ const vetoOneSurvivor: MockScenario = {
     officialMethod: 'ivstar',
     voteCount: 6,
     mj: [
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 6, gradeCounts: gc(4, 0, 0, 0, 0, 2) },
-      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 2, totalVotes: 6, gradeCounts: gc(3, 0, 0, 0, 0, 3) },
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 3, totalVotes: 6, gradeCounts: gc(2, 4, 0, 0, 0, 0) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 6, gradeCounts: gc(4, 0, 0, 0, 0, 2) },
+      {
+        id: 'pandemic',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 2,
+        totalVotes: 6,
+        gradeCounts: gc(3, 0, 0, 0, 0, 3),
+      },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 3,
+        totalVotes: 6,
+        gradeCounts: gc(2, 4, 0, 0, 0, 0),
+      },
     ],
     star: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 6,
         starScore: 26,
@@ -1490,7 +1831,7 @@ const vetoOneSurvivor: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 6,
         starScore: 20,
@@ -1500,7 +1841,7 @@ const vetoOneSurvivor: MockScenario = {
       {
         id: 'pandemic',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 3,
         totalVotes: 6,
         starScore: 15,
@@ -1508,11 +1849,18 @@ const vetoOneSurvivor: MockScenario = {
       },
     ],
     ivmj: [
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 6, gradeCounts: gc(2, 4, 0, 0, 0, 0) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 6,
+        gradeCounts: gc(2, 4, 0, 0, 0, 0),
+      },
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 6,
         vetoed: true,
@@ -1522,7 +1870,7 @@ const vetoOneSurvivor: MockScenario = {
       {
         id: 'pandemic',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 3,
         totalVotes: 6,
         vetoed: true,
@@ -1532,9 +1880,9 @@ const vetoOneSurvivor: MockScenario = {
     ],
     ivstar: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 6,
         starScore: 26,
@@ -1544,7 +1892,7 @@ const vetoOneSurvivor: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 6,
         starScore: 20,
@@ -1555,7 +1903,7 @@ const vetoOneSurvivor: MockScenario = {
       {
         id: 'pandemic',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 3,
         totalVotes: 6,
         starScore: 15,
@@ -1566,9 +1914,9 @@ const vetoOneSurvivor: MockScenario = {
     ],
     borda: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 6,
         bordaScore: 10,
@@ -1577,7 +1925,7 @@ const vetoOneSurvivor: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 6,
         bordaScore: 8,
@@ -1586,7 +1934,7 @@ const vetoOneSurvivor: MockScenario = {
       {
         id: 'pandemic',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 3,
         totalVotes: 6,
         bordaScore: 6,
@@ -1594,11 +1942,18 @@ const vetoOneSurvivor: MockScenario = {
       },
     ],
     irv: [
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 6, gradeCounts: gc(2, 4, 0, 0, 0, 0) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 6,
+        gradeCounts: gc(2, 4, 0, 0, 0, 0),
+      },
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 6,
         irvElimRound: 2,
@@ -1607,7 +1962,7 @@ const vetoOneSurvivor: MockScenario = {
       {
         id: 'pandemic',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 3,
         totalVotes: 6,
         irvElimRound: 1,
@@ -1616,9 +1971,9 @@ const vetoOneSurvivor: MockScenario = {
     ],
     condorcet: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 6,
         pairwiseWins: 2,
@@ -1627,7 +1982,7 @@ const vetoOneSurvivor: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 6,
         pairwiseWins: 1,
@@ -1636,7 +1991,7 @@ const vetoOneSurvivor: MockScenario = {
       {
         id: 'pandemic',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 3,
         totalVotes: 6,
         pairwiseWins: 0,
@@ -1645,9 +2000,23 @@ const vetoOneSurvivor: MockScenario = {
     ],
     condorcetParadox: false,
     dictator: d([
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 6, gradeCounts: gc(4, 0, 0, 0, 0, 2) },
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 2, totalVotes: 6, gradeCounts: gc(2, 4, 0, 0, 0, 0) },
-      { id: 'pandemic', name: 'Pandemic', thumbnail: '', rank: 3, totalVotes: 6, gradeCounts: gc(3, 0, 0, 0, 0, 3) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 6, gradeCounts: gc(4, 0, 0, 0, 0, 2) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 2,
+        totalVotes: 6,
+        gradeCounts: gc(2, 4, 0, 0, 0, 0),
+      },
+      {
+        id: 'pandemic',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 3,
+        totalVotes: 6,
+        gradeCounts: gc(3, 0, 0, 0, 0, 3),
+      },
     ]),
     dictatorName: 'Alex',
   },
@@ -1664,15 +2033,22 @@ const vetoChangesWinner: MockScenario = {
     officialMethod: 'ivstar',
     voteCount: 5,
     mj: [
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(4, 0, 0, 0, 0, 1) },
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(2, 3, 0, 0, 0, 0) },
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0, 2, 3, 0, 0, 0) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 5, gradeCounts: gc(4, 0, 0, 0, 0, 1) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 2,
+        totalVotes: 5,
+        gradeCounts: gc(2, 3, 0, 0, 0, 0),
+      },
+      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 2, 3, 0, 0, 0) },
     ],
     star: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 5,
         starScore: 22,
@@ -1682,7 +2058,7 @@ const vetoChangesWinner: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 5,
         starScore: 20,
@@ -1690,9 +2066,9 @@ const vetoChangesWinner: MockScenario = {
         gradeCounts: gc(4, 0, 0, 0, 0, 1),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 5,
         starScore: 17,
@@ -1700,12 +2076,19 @@ const vetoChangesWinner: MockScenario = {
       },
     ],
     ivmj: [
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(2, 3, 0, 0, 0, 0) },
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(0, 2, 3, 0, 0, 0) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 5,
+        gradeCounts: gc(2, 3, 0, 0, 0, 0),
+      },
+      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 2, totalVotes: 5, gradeCounts: gc(0, 2, 3, 0, 0, 0) },
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 5,
         vetoed: true,
@@ -1715,9 +2098,9 @@ const vetoChangesWinner: MockScenario = {
     ],
     ivstar: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 5,
         starScore: 22,
@@ -1725,9 +2108,9 @@ const vetoChangesWinner: MockScenario = {
         gradeCounts: gc(2, 3, 0, 0, 0, 0),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 2,
         totalVotes: 5,
         starScore: 17,
@@ -1737,7 +2120,7 @@ const vetoChangesWinner: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 5,
         starScore: 20,
@@ -1748,9 +2131,9 @@ const vetoChangesWinner: MockScenario = {
     ],
     borda: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 5,
         bordaScore: 8,
@@ -1759,16 +2142,16 @@ const vetoChangesWinner: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 5,
         bordaScore: 7,
         gradeCounts: gc(4, 0, 0, 0, 0, 1),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 5,
         bordaScore: 5,
@@ -1776,20 +2159,27 @@ const vetoChangesWinner: MockScenario = {
       },
     ],
     irv: [
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(2, 3, 0, 0, 0, 0) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 5,
+        gradeCounts: gc(2, 3, 0, 0, 0, 0),
+      },
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 5,
         irvElimRound: 2,
         gradeCounts: gc(4, 0, 0, 0, 0, 1),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 5,
         irvElimRound: 1,
@@ -1798,9 +2188,9 @@ const vetoChangesWinner: MockScenario = {
     ],
     condorcet: [
       {
-        id: 'wingspan',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 5,
         pairwiseWins: 2,
@@ -1809,16 +2199,16 @@ const vetoChangesWinner: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 5,
         pairwiseWins: 1,
         gradeCounts: gc(4, 0, 0, 0, 0, 1),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 5,
         pairwiseWins: 0,
@@ -1827,9 +2217,16 @@ const vetoChangesWinner: MockScenario = {
     ],
     condorcetParadox: false,
     dictator: d([
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 5, gradeCounts: gc(4, 0, 0, 0, 0, 1) },
-      { id: 'wingspan', name: 'Wingspan', thumbnail: '', rank: 2, totalVotes: 5, gradeCounts: gc(2, 3, 0, 0, 0, 0) },
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 3, totalVotes: 5, gradeCounts: gc(0, 2, 3, 0, 0, 0) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 5, gradeCounts: gc(4, 0, 0, 0, 0, 1) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 2,
+        totalVotes: 5,
+        gradeCounts: gc(2, 3, 0, 0, 0, 0),
+      },
+      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 2, 3, 0, 0, 0) },
     ]),
     dictatorName: 'Sam',
   },
@@ -1838,14 +2235,14 @@ const vetoChangesWinner: MockScenario = {
 // ─── Scenario: Maximum Disagreement ──────────────────────────────────────────
 // 7 voters, 5 games, engineered so that five of the eight methods pick five
 // different winners:
-//   MJ        → Azul     (polarizer with 4 excellents gives median=excellent)
+//   MJ        → Ra     (polarizer with 4 excellents gives median=excellent)
 //   STAR      → Brass    (score leader, wins runoff on broad high ratings)
 //   Borda     → Brass    (consistent top-half ranking)
 //   IRV       → Brass    (survives eliminations after redistribution)
 //   Condorcet → Brass    (beats every other game head-to-head)
-//   IV·STAR   → Dominion (Brass & Azul vetoed for hard-passes; Dom beats Catan in runoff)
+//   IV·STAR   → Dominion (Brass & Ra vetoed for hard-passes; Dom beats Catan in runoff)
 //   IV·MJ     → Catan    (same veto, but Catan's median verygood > Dom's good)
-//   Dictator  → Everdell (Sam, the last voter, rates Everdell excellent)
+//   Dictator  → A Feast for Odin (Sam, the last voter, rates A Feast for Odin excellent)
 // Winner distinct count across the 8 methods: 5.
 // Ballots verified by running the real voting functions against synthesized
 // grades before committing.
@@ -1859,24 +2256,38 @@ const maxDisagree: MockScenario = {
     officialMethod: 'ivstar',
     voteCount: 7,
     mj: [
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
+      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 1, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 7,
         gradeCounts: gc(3, 3, 0, 0, 0, 1),
       },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
-      { id: 'dom', name: 'Dominion', thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(2, 1, 4, 0, 0, 0) },
-      { id: 'ever', name: 'Everdell', thumbnail: '', rank: 5, totalVotes: 7, gradeCounts: gc(1, 0, 0, 0, 0, 6) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 3, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
+      {
+        id: 'dom',
+        name: 'Dominion',
+        thumbnail: thumb('36218'),
+        rank: 4,
+        totalVotes: 7,
+        gradeCounts: gc(2, 1, 4, 0, 0, 0),
+      },
+      {
+        id: 'odin',
+        name: 'A Feast for Odin',
+        thumbnail: thumb('177736'),
+        rank: 5,
+        totalVotes: 7,
+        gradeCounts: gc(1, 0, 0, 0, 0, 6),
+      },
     ],
     star: [
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 7,
         starScore: 27,
@@ -1886,7 +2297,7 @@ const maxDisagree: MockScenario = {
       {
         id: 'dom',
         name: 'Dominion',
-        thumbnail: '',
+        thumbnail: thumb('36218'),
         rank: 2,
         totalVotes: 7,
         starScore: 26,
@@ -1896,25 +2307,25 @@ const maxDisagree: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 7,
         starScore: 25,
         gradeCounts: gc(0, 4, 3, 0, 0, 0),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 4,
         totalVotes: 7,
         starScore: 20,
         gradeCounts: gc(4, 0, 0, 0, 0, 3),
       },
       {
-        id: 'ever',
-        name: 'Everdell',
-        thumbnail: '',
+        id: 'odin',
+        name: 'A Feast for Odin',
+        thumbnail: thumb('177736'),
         rank: 5,
         totalVotes: 7,
         starScore: 5,
@@ -1922,12 +2333,19 @@ const maxDisagree: MockScenario = {
       },
     ],
     ivmj: [
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
-      { id: 'dom', name: 'Dominion', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(2, 1, 4, 0, 0, 0) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'dom',
+        name: 'Dominion',
+        thumbnail: thumb('36218'),
+        rank: 2,
+        totalVotes: 7,
+        gradeCounts: gc(2, 1, 4, 0, 0, 0),
+      },
+      {
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 7,
         vetoed: true,
@@ -1937,7 +2355,7 @@ const maxDisagree: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 4,
         totalVotes: 7,
         vetoed: true,
@@ -1945,9 +2363,9 @@ const maxDisagree: MockScenario = {
         gradeCounts: gc(3, 3, 0, 0, 0, 1),
       },
       {
-        id: 'ever',
-        name: 'Everdell',
-        thumbnail: '',
+        id: 'odin',
+        name: 'A Feast for Odin',
+        thumbnail: thumb('177736'),
         rank: 5,
         totalVotes: 7,
         vetoed: true,
@@ -1959,7 +2377,7 @@ const maxDisagree: MockScenario = {
       {
         id: 'dom',
         name: 'Dominion',
-        thumbnail: '',
+        thumbnail: thumb('36218'),
         rank: 1,
         totalVotes: 7,
         starScore: 26,
@@ -1969,7 +2387,7 @@ const maxDisagree: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 7,
         starScore: 25,
@@ -1977,9 +2395,9 @@ const maxDisagree: MockScenario = {
         gradeCounts: gc(0, 4, 3, 0, 0, 0),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 7,
         starScore: 20,
@@ -1990,7 +2408,7 @@ const maxDisagree: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 4,
         totalVotes: 7,
         starScore: 27,
@@ -1999,9 +2417,9 @@ const maxDisagree: MockScenario = {
         gradeCounts: gc(3, 3, 0, 0, 0, 1),
       },
       {
-        id: 'ever',
-        name: 'Everdell',
-        thumbnail: '',
+        id: 'odin',
+        name: 'A Feast for Odin',
+        thumbnail: thumb('177736'),
         rank: 5,
         totalVotes: 7,
         starScore: 5,
@@ -2014,7 +2432,7 @@ const maxDisagree: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 7,
         bordaScore: 20,
@@ -2023,16 +2441,16 @@ const maxDisagree: MockScenario = {
       {
         id: 'dom',
         name: 'Dominion',
-        thumbnail: '',
+        thumbnail: thumb('36218'),
         rank: 2,
         totalVotes: 7,
         bordaScore: 16.5,
         gradeCounts: gc(2, 1, 4, 0, 0, 0),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 7,
         bordaScore: 15,
@@ -2041,16 +2459,16 @@ const maxDisagree: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 4,
         totalVotes: 7,
         bordaScore: 13.5,
         gradeCounts: gc(0, 4, 3, 0, 0, 0),
       },
       {
-        id: 'ever',
-        name: 'Everdell',
-        thumbnail: '',
+        id: 'odin',
+        name: 'A Feast for Odin',
+        thumbnail: thumb('177736'),
         rank: 5,
         totalVotes: 7,
         bordaScore: 5,
@@ -2061,24 +2479,24 @@ const maxDisagree: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 7,
         gradeCounts: gc(3, 3, 0, 0, 0, 1),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 2,
         totalVotes: 7,
         irvElimRound: 4,
         gradeCounts: gc(4, 0, 0, 0, 0, 3),
       },
       {
-        id: 'ever',
-        name: 'Everdell',
-        thumbnail: '',
+        id: 'odin',
+        name: 'A Feast for Odin',
+        thumbnail: thumb('177736'),
         rank: 3,
         totalVotes: 7,
         irvElimRound: 3,
@@ -2087,7 +2505,7 @@ const maxDisagree: MockScenario = {
       {
         id: 'dom',
         name: 'Dominion',
-        thumbnail: '',
+        thumbnail: thumb('36218'),
         rank: 4,
         totalVotes: 7,
         irvElimRound: 2,
@@ -2096,7 +2514,7 @@ const maxDisagree: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 5,
         totalVotes: 7,
         irvElimRound: 1,
@@ -2107,7 +2525,7 @@ const maxDisagree: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 7,
         pairwiseWins: 4,
@@ -2116,16 +2534,16 @@ const maxDisagree: MockScenario = {
       {
         id: 'dom',
         name: 'Dominion',
-        thumbnail: '',
+        thumbnail: thumb('36218'),
         rank: 2,
         totalVotes: 7,
         pairwiseWins: 3,
         gradeCounts: gc(2, 1, 4, 0, 0, 0),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 3,
         totalVotes: 7,
         pairwiseWins: 2,
@@ -2134,16 +2552,16 @@ const maxDisagree: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 4,
         totalVotes: 7,
         pairwiseWins: 1,
         gradeCounts: gc(0, 4, 3, 0, 0, 0),
       },
       {
-        id: 'ever',
-        name: 'Everdell',
-        thumbnail: '',
+        id: 'odin',
+        name: 'A Feast for Odin',
+        thumbnail: thumb('177736'),
         rank: 5,
         totalVotes: 7,
         pairwiseWins: 0,
@@ -2152,14 +2570,28 @@ const maxDisagree: MockScenario = {
     ],
     condorcetParadox: false,
     dictator: d([
-      { id: 'ever', name: 'Everdell', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(1, 0, 0, 0, 0, 6) },
-      { id: 'dom', name: 'Dominion', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(2, 1, 4, 0, 0, 0) },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 4, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
+      {
+        id: 'odin',
+        name: 'A Feast for Odin',
+        thumbnail: thumb('177736'),
+        rank: 1,
+        totalVotes: 7,
+        gradeCounts: gc(1, 0, 0, 0, 0, 6),
+      },
+      {
+        id: 'dom',
+        name: 'Dominion',
+        thumbnail: thumb('36218'),
+        rank: 2,
+        totalVotes: 7,
+        gradeCounts: gc(2, 1, 4, 0, 0, 0),
+      },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 3, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
+      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 4, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 5,
         totalVotes: 7,
         gradeCounts: gc(3, 3, 0, 0, 0, 1),
@@ -2171,52 +2603,52 @@ const maxDisagree: MockScenario = {
 
 // ─── Scenario 11: Condorcet Paradox (asymmetric) ─────────────────────────────
 // 7 voters, 3 candidates — a genuine cycle where grades differ between candidates.
-//   Group A (3 voters): Azul=E, Brass=VG, Catan=Avg  →  Azul > Brass > Catan
-//   Group B (3 voters): Brass=E, Catan=VG, Azul=Good →  Brass > Catan > Azul
-//   Group C (1 voter):  Catan=E, Azul=VG,  Brass=Good → Catan > Azul > Brass
+//   Group A (3 voters): Ra=E, Brass=VG, Catan=Avg  →  Ra > Brass > Catan
+//   Group B (3 voters): Brass=E, Catan=VG, Ra=Good →  Brass > Catan > Ra
+//   Group C (1 voter):  Catan=E, Ra=VG,  Brass=Good → Catan > Ra > Brass
 //
 // Pairwise head-to-head:
-//   Azul  beats Brass  4-3 (groups A+C prefer Azul)
+//   Ra  beats Brass  4-3 (groups A+C prefer Ra)
 //   Brass beats Catan  6-1 (groups A+B prefer Brass)
-//   Catan beats Azul   4-3 (groups B+C prefer Catan)
-// → Azul > Brass > Catan > Azul: genuine cycle, no Condorcet winner.
+//   Catan beats Ra   4-3 (groups B+C prefer Catan)
+// → Ra > Brass > Catan > Ra: genuine cycle, no Condorcet winner.
 //
-// Other methods split: MJ/Borda pick Brass (consistent highs), STAR/IRV pick Azul
+// Other methods split: MJ/Borda pick Brass (consistent highs), STAR/IRV pick Ra
 // (runoff flip from Brass). Dictator (lone Catan fan, "Morgan") picks Catan.
 const condorcetCycle: MockScenario = {
   id: 'mock-condorcet-cycle',
   label: 'Condorcet Cycle',
-  description: 'Azul>Brass>Catan>Azul — a real cycle with different grades per candidate, not just a perfect tie.',
+  description: 'Ra>Brass>Catan>Ra — a real cycle with different grades per candidate, not just a perfect tie.',
   tally: {
     ballotId: 0,
     ballotName: 'Rock Paper Scissors',
     officialMethod: 'condorcet',
     voteCount: 7,
     // Grade distributions:
-    //   Azul:  3E (grpA) + 1VG (grpC) + 3Good (grpB) → gc(3,1,3,0,0,0)
+    //   Ra:  3E (grpA) + 1VG (grpC) + 3Good (grpB) → gc(3,1,3,0,0,0)
     //   Brass: 3VG (grpA) + 3E (grpB) + 1Good (grpC) → gc(3,3,1,0,0,0)
     //   Catan: 3E→Avg (grpA) + 3VG (grpB) + 1E (grpC) → gc(1,3,0,3,0,0)
-    // MJ medians: Azul=VG (lean neutral), Brass=VG (lean up) → Brass wins MJ
+    // MJ medians: Ra=VG (lean neutral), Brass=VG (lean up) → Brass wins MJ
     mj: [
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 7,
         gradeCounts: gc(3, 3, 1, 0, 0, 0),
       },
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(3, 1, 3, 0, 0, 0) },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(1, 3, 0, 3, 0, 0) },
+      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 2, totalVotes: 7, gradeCounts: gc(3, 1, 3, 0, 0, 0) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 3, totalVotes: 7, gradeCounts: gc(1, 3, 0, 3, 0, 0) },
     ],
-    // STAR scores: Brass=30, Azul=28, Catan=23. Top 2: Brass/Azul.
-    // Runoff: grpA(3) prefer Azul(E>VG), grpB(3) prefer Brass(E>Good), grpC(1) prefer Azul(VG>Good)
-    // Azul wins runoff 4-3. STAR: Azul wins.
+    // STAR scores: Brass=30, Ra=28, Catan=23. Top 2: Brass/Ra.
+    // Runoff: grpA(3) prefer Ra(E>VG), grpB(3) prefer Brass(E>Good), grpC(1) prefer Ra(VG>Good)
+    // Ra wins runoff 4-3. STAR: Ra wins.
     star: [
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 1,
         totalVotes: 7,
         starScore: 28,
@@ -2226,7 +2658,7 @@ const condorcetCycle: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 7,
         starScore: 30,
@@ -2236,7 +2668,7 @@ const condorcetCycle: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 7,
         starScore: 23,
@@ -2248,19 +2680,19 @@ const condorcetCycle: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 7,
         gradeCounts: gc(3, 3, 1, 0, 0, 0),
       },
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(3, 1, 3, 0, 0, 0) },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 7, gradeCounts: gc(1, 3, 0, 3, 0, 0) },
+      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 2, totalVotes: 7, gradeCounts: gc(3, 1, 3, 0, 0, 0) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 3, totalVotes: 7, gradeCounts: gc(1, 3, 0, 3, 0, 0) },
     ],
     ivstar: [
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 1,
         totalVotes: 7,
         starScore: 28,
@@ -2270,7 +2702,7 @@ const condorcetCycle: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 7,
         starScore: 30,
@@ -2280,28 +2712,28 @@ const condorcetCycle: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 7,
         starScore: 23,
         gradeCounts: gc(1, 3, 0, 3, 0, 0),
       },
     ],
-    // Borda: Brass=9, Azul=7, Catan=5
+    // Borda: Brass=9, Ra=7, Catan=5
     borda: [
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 7,
         bordaScore: 9,
         gradeCounts: gc(3, 3, 1, 0, 0, 0),
       },
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 2,
         totalVotes: 7,
         bordaScore: 7,
@@ -2310,20 +2742,20 @@ const condorcetCycle: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 7,
         bordaScore: 5,
         gradeCounts: gc(1, 3, 0, 3, 0, 0),
       },
     ],
-    // IRV: Catan elim round 1 (1 vote → Azul). Round 2: Azul=4, Brass=3. Azul wins.
+    // IRV: Catan elim round 1 (1 vote → Ra). Round 2: Ra=4, Brass=3. Ra wins.
     irv: [
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(3, 1, 3, 0, 0, 0) },
+      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 1, totalVotes: 7, gradeCounts: gc(3, 1, 3, 0, 0, 0) },
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 7,
         irvElimRound: 2,
@@ -2332,7 +2764,7 @@ const condorcetCycle: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 7,
         irvElimRound: 1,
@@ -2342,9 +2774,9 @@ const condorcetCycle: MockScenario = {
     // Condorcet: each candidate has 1 pairwise win. Cycle! hasParadox = true.
     condorcet: [
       {
-        id: 'azul',
-        name: 'Azul',
-        thumbnail: '',
+        id: 'ra',
+        name: 'Ra',
+        thumbnail: thumb('12'),
         rank: 1,
         totalVotes: 7,
         pairwiseWins: 1,
@@ -2353,7 +2785,7 @@ const condorcetCycle: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 7,
         pairwiseWins: 1,
@@ -2362,7 +2794,7 @@ const condorcetCycle: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 1,
         totalVotes: 7,
         pairwiseWins: 1,
@@ -2372,12 +2804,12 @@ const condorcetCycle: MockScenario = {
     condorcetParadox: true,
     // Dictator: Morgan (the lone Group C voter, last to vote) picks Catan
     dictator: d([
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 7, gradeCounts: gc(1, 3, 0, 3, 0, 0) },
-      { id: 'azul', name: 'Azul', thumbnail: '', rank: 2, totalVotes: 7, gradeCounts: gc(3, 1, 3, 0, 0, 0) },
+      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(1, 3, 0, 3, 0, 0) },
+      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 2, totalVotes: 7, gradeCounts: gc(3, 1, 3, 0, 0, 0) },
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 3,
         totalVotes: 7,
         gradeCounts: gc(3, 3, 1, 0, 0, 0),
@@ -2658,20 +3090,20 @@ const tennessee: MockScenario = {
 
 // ─── Scenario: IRV Non-Monotonicity — Baseline ───────────────────────────────
 // 17 voters split four ways (the canonical Woodall example — smaller variants
-// hit ties). Wingspan wins every method, including IRV. Pairwise comparisons
-// form a cycle (Wingspan > Brass > Catan > Wingspan), so Condorcet has no
+// hit ties). Harmonies wins every method, including IRV. Pairwise comparisons
+// form a cycle (Harmonies > Brass > Catan > Harmonies), so Condorcet has no
 // winner. Morgan is the last voter, in the brass>wing>catan camp — Dictator
 // picks Brass.
 //
 // IRV rounds: R1 wing=6, brass=6, catan=5 → catan eliminated.
-//             R2 wing=11, brass=6 → Wingspan wins.
+//             R2 wing=11, brass=6 → Harmonies wins.
 //
-// Companion to irvRaised: raising Wingspan in two ballots makes IRV flip.
+// Companion to irvRaised: raising Harmonies in two ballots makes IRV flip.
 const irvSincere: MockScenario = {
   id: 'mock-irv-sincere',
   label: 'IRV — Baseline',
   description:
-    'Wingspan wins every method, including IRV. Its companion scenario raises Wingspan on two ballots — and IRV kicks Wingspan out.',
+    'Harmonies wins every method, including IRV. Its companion scenario raises Harmonies on two ballots — and IRV kicks Harmonies out.',
   related: { id: 'mock-irv-raised', label: 'IRV — Raising Backfires' },
   tally: {
     ballotId: 0,
@@ -2679,22 +3111,36 @@ const irvSincere: MockScenario = {
     officialMethod: 'irv',
     voteCount: 17,
     mj: [
-      { id: 'wing', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 17, gradeCounts: gc(6, 7, 0, 0, 0, 4) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 17,
+        gradeCounts: gc(6, 7, 0, 0, 0, 4),
+      },
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 17,
         gradeCounts: gc(6, 6, 0, 0, 0, 5),
       },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 17, gradeCounts: gc(5, 0, 4, 0, 0, 8) },
+      {
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: thumb('13'),
+        rank: 3,
+        totalVotes: 17,
+        gradeCounts: gc(5, 0, 4, 0, 0, 8),
+      },
     ],
     star: [
       {
-        id: 'wing',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 17,
         starScore: 58,
@@ -2704,7 +3150,7 @@ const irvSincere: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 17,
         starScore: 54,
@@ -2714,7 +3160,7 @@ const irvSincere: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 17,
         starScore: 37,
@@ -2722,11 +3168,18 @@ const irvSincere: MockScenario = {
       },
     ],
     ivmj: [
-      { id: 'wing', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 17, gradeCounts: gc(6, 7, 0, 0, 0, 4) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 17,
+        gradeCounts: gc(6, 7, 0, 0, 0, 4),
+      },
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 17,
         vetoed: true,
@@ -2736,7 +3189,7 @@ const irvSincere: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 17,
         vetoed: true,
@@ -2746,9 +3199,9 @@ const irvSincere: MockScenario = {
     ],
     ivstar: [
       {
-        id: 'wing',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 17,
         starScore: 58,
@@ -2758,7 +3211,7 @@ const irvSincere: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 17,
         starScore: 54,
@@ -2769,7 +3222,7 @@ const irvSincere: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 17,
         starScore: 37,
@@ -2780,9 +3233,9 @@ const irvSincere: MockScenario = {
     ],
     borda: [
       {
-        id: 'wing',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 17,
         bordaScore: 19,
@@ -2791,7 +3244,7 @@ const irvSincere: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 17,
         bordaScore: 18,
@@ -2800,7 +3253,7 @@ const irvSincere: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 17,
         bordaScore: 14,
@@ -2808,11 +3261,18 @@ const irvSincere: MockScenario = {
       },
     ],
     irv: [
-      { id: 'wing', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 17, gradeCounts: gc(6, 7, 0, 0, 0, 4) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 17,
+        gradeCounts: gc(6, 7, 0, 0, 0, 4),
+      },
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 17,
         irvElimRound: 2,
@@ -2821,7 +3281,7 @@ const irvSincere: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 17,
         irvElimRound: 1,
@@ -2830,9 +3290,9 @@ const irvSincere: MockScenario = {
     ],
     condorcet: [
       {
-        id: 'wing',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 17,
         pairwiseWins: 1,
@@ -2841,7 +3301,7 @@ const irvSincere: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 17,
         pairwiseWins: 1,
@@ -2850,7 +3310,7 @@ const irvSincere: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 1,
         totalVotes: 17,
         pairwiseWins: 1,
@@ -2862,13 +3322,27 @@ const irvSincere: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 17,
         gradeCounts: gc(6, 6, 0, 0, 0, 5),
       },
-      { id: 'wing', name: 'Wingspan', thumbnail: '', rank: 2, totalVotes: 17, gradeCounts: gc(6, 7, 0, 0, 0, 4) },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 17, gradeCounts: gc(5, 0, 4, 0, 0, 8) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 2,
+        totalVotes: 17,
+        gradeCounts: gc(6, 7, 0, 0, 0, 4),
+      },
+      {
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: thumb('13'),
+        rank: 3,
+        totalVotes: 17,
+        gradeCounts: gc(5, 0, 4, 0, 0, 8),
+      },
     ]),
     dictatorName: 'Morgan',
   },
@@ -2876,8 +3350,8 @@ const irvSincere: MockScenario = {
 
 // ─── Scenario: IRV Non-Monotonicity — Raised ─────────────────────────────────
 // Same 17 voters — Morgan and one peer flip brass>wing>catan to wing>brass>catan
-// (raising their second-favorite Wingspan to first). Every score-based method
-// still picks Wingspan, and A's scores actually rise. But IRV now eliminates
+// (raising their second-favorite Harmonies to first). Every score-based method
+// still picks Harmonies, and A's scores actually rise. But IRV now eliminates
 // Brass first, transfers its ballots to Catan, and Catan wins.
 //
 // IRV rounds: R1 wing=8, brass=4, catan=5 → brass eliminated.
@@ -2888,30 +3362,44 @@ const irvRaised: MockScenario = {
   id: 'mock-irv-raised',
   label: 'IRV — Raising Backfires',
   description:
-    'Same ballot as the Baseline — but two voters bump Wingspan to first. IRV now eliminates Brass, transfers the votes to Catan, and Catan wins. Raising Wingspan made Wingspan lose.',
+    'Same ballot as the Baseline — but two voters bump Harmonies to first. IRV now eliminates Brass, transfers the votes to Catan, and Catan wins. Raising Harmonies made Harmonies lose.',
   related: { id: 'mock-irv-sincere', label: 'IRV — Baseline' },
   tally: {
     ballotId: 0,
-    ballotName: 'Board Game Showdown — Wingspan Raised',
+    ballotName: 'Board Game Showdown — Harmonies Raised',
     officialMethod: 'irv',
     voteCount: 17,
     mj: [
-      { id: 'wing', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 17, gradeCounts: gc(8, 5, 0, 0, 0, 4) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 17,
+        gradeCounts: gc(8, 5, 0, 0, 0, 4),
+      },
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 17,
         gradeCounts: gc(4, 8, 0, 0, 0, 5),
       },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 17, gradeCounts: gc(5, 0, 4, 0, 0, 8) },
+      {
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: thumb('13'),
+        rank: 3,
+        totalVotes: 17,
+        gradeCounts: gc(5, 0, 4, 0, 0, 8),
+      },
     ],
     star: [
       {
-        id: 'wing',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 17,
         starScore: 60,
@@ -2921,7 +3409,7 @@ const irvRaised: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 17,
         starScore: 52,
@@ -2931,7 +3419,7 @@ const irvRaised: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 17,
         starScore: 37,
@@ -2939,11 +3427,18 @@ const irvRaised: MockScenario = {
       },
     ],
     ivmj: [
-      { id: 'wing', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 17, gradeCounts: gc(8, 5, 0, 0, 0, 4) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 17,
+        gradeCounts: gc(8, 5, 0, 0, 0, 4),
+      },
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 17,
         vetoed: true,
@@ -2953,7 +3448,7 @@ const irvRaised: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 17,
         vetoed: true,
@@ -2963,9 +3458,9 @@ const irvRaised: MockScenario = {
     ],
     ivstar: [
       {
-        id: 'wing',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 17,
         starScore: 60,
@@ -2975,7 +3470,7 @@ const irvRaised: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 17,
         starScore: 52,
@@ -2986,7 +3481,7 @@ const irvRaised: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 17,
         starScore: 37,
@@ -2997,9 +3492,9 @@ const irvRaised: MockScenario = {
     ],
     borda: [
       {
-        id: 'wing',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 17,
         bordaScore: 21,
@@ -3008,7 +3503,7 @@ const irvRaised: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 17,
         bordaScore: 16,
@@ -3017,7 +3512,7 @@ const irvRaised: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 17,
         bordaScore: 14,
@@ -3025,11 +3520,18 @@ const irvRaised: MockScenario = {
       },
     ],
     irv: [
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 17, gradeCounts: gc(5, 0, 4, 0, 0, 8) },
       {
-        id: 'wing',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: thumb('13'),
+        rank: 1,
+        totalVotes: 17,
+        gradeCounts: gc(5, 0, 4, 0, 0, 8),
+      },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 2,
         totalVotes: 17,
         irvElimRound: 2,
@@ -3038,7 +3540,7 @@ const irvRaised: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 3,
         totalVotes: 17,
         irvElimRound: 1,
@@ -3047,9 +3549,9 @@ const irvRaised: MockScenario = {
     ],
     condorcet: [
       {
-        id: 'wing',
-        name: 'Wingspan',
-        thumbnail: '',
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
         rank: 1,
         totalVotes: 17,
         pairwiseWins: 1,
@@ -3058,7 +3560,7 @@ const irvRaised: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 17,
         pairwiseWins: 1,
@@ -3067,7 +3569,7 @@ const irvRaised: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 1,
         totalVotes: 17,
         pairwiseWins: 1,
@@ -3076,16 +3578,30 @@ const irvRaised: MockScenario = {
     ],
     condorcetParadox: true,
     dictator: d([
-      { id: 'wing', name: 'Wingspan', thumbnail: '', rank: 1, totalVotes: 17, gradeCounts: gc(8, 5, 0, 0, 0, 4) },
+      {
+        id: 'harmonies',
+        name: 'Harmonies',
+        thumbnail: thumb('414317'),
+        rank: 1,
+        totalVotes: 17,
+        gradeCounts: gc(8, 5, 0, 0, 0, 4),
+      },
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 17,
         gradeCounts: gc(4, 8, 0, 0, 0, 5),
       },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 17, gradeCounts: gc(5, 0, 4, 0, 0, 8) },
+      {
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: thumb('13'),
+        rank: 3,
+        totalVotes: 17,
+        gradeCounts: gc(5, 0, 4, 0, 0, 8),
+      },
     ]),
     dictatorName: 'Morgan',
   },
@@ -3113,12 +3629,26 @@ const compromiseWins: MockScenario = {
     officialMethod: 'star',
     voteCount: 11,
     mj: [
-      { id: 'cn', name: 'Codenames', thumbnail: '', rank: 1, totalVotes: 11, gradeCounts: gc(3, 8, 0, 0, 0, 0) },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 2, totalVotes: 11, gradeCounts: gc(4, 0, 3, 0, 0, 4) },
       {
-        id: 'ti',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'cn',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 1,
+        totalVotes: 11,
+        gradeCounts: gc(3, 8, 0, 0, 0, 0),
+      },
+      {
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: thumb('13'),
+        rank: 2,
+        totalVotes: 11,
+        gradeCounts: gc(4, 0, 3, 0, 0, 4),
+      },
+      {
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 3,
         totalVotes: 11,
         gradeCounts: gc(4, 0, 3, 0, 0, 4),
@@ -3128,7 +3658,7 @@ const compromiseWins: MockScenario = {
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 1,
         totalVotes: 11,
         starScore: 47,
@@ -3136,9 +3666,9 @@ const compromiseWins: MockScenario = {
         gradeCounts: gc(3, 8, 0, 0, 0, 0),
       },
       {
-        id: 'ti',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 2,
         totalVotes: 11,
         starScore: 29,
@@ -3148,7 +3678,7 @@ const compromiseWins: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 11,
         starScore: 29,
@@ -3156,11 +3686,18 @@ const compromiseWins: MockScenario = {
       },
     ],
     ivmj: [
-      { id: 'cn', name: 'Codenames', thumbnail: '', rank: 1, totalVotes: 11, gradeCounts: gc(3, 8, 0, 0, 0, 0) },
       {
-        id: 'ti',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'cn',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 1,
+        totalVotes: 11,
+        gradeCounts: gc(3, 8, 0, 0, 0, 0),
+      },
+      {
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 2,
         totalVotes: 11,
         vetoed: true,
@@ -3170,7 +3707,7 @@ const compromiseWins: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 11,
         vetoed: true,
@@ -3182,7 +3719,7 @@ const compromiseWins: MockScenario = {
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 1,
         totalVotes: 11,
         starScore: 47,
@@ -3190,9 +3727,9 @@ const compromiseWins: MockScenario = {
         gradeCounts: gc(3, 8, 0, 0, 0, 0),
       },
       {
-        id: 'ti',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 2,
         totalVotes: 11,
         starScore: 29,
@@ -3203,7 +3740,7 @@ const compromiseWins: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 11,
         starScore: 29,
@@ -3216,16 +3753,16 @@ const compromiseWins: MockScenario = {
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 1,
         totalVotes: 11,
         bordaScore: 14,
         gradeCounts: gc(3, 8, 0, 0, 0, 0),
       },
       {
-        id: 'ti',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 2,
         totalVotes: 11,
         bordaScore: 9.5,
@@ -3234,7 +3771,7 @@ const compromiseWins: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 11,
         bordaScore: 9.5,
@@ -3243,18 +3780,25 @@ const compromiseWins: MockScenario = {
     ],
     irv: [
       {
-        id: 'ti',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 1,
         totalVotes: 11,
         gradeCounts: gc(4, 0, 3, 0, 0, 4),
       },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 1, totalVotes: 11, gradeCounts: gc(4, 0, 3, 0, 0, 4) },
+      {
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: thumb('13'),
+        rank: 1,
+        totalVotes: 11,
+        gradeCounts: gc(4, 0, 3, 0, 0, 4),
+      },
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 11,
         irvElimRound: 1,
@@ -3265,16 +3809,16 @@ const compromiseWins: MockScenario = {
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 1,
         totalVotes: 11,
         pairwiseWins: 2,
         gradeCounts: gc(3, 8, 0, 0, 0, 0),
       },
       {
-        id: 'ti',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 2,
         totalVotes: 11,
         pairwiseWins: 0,
@@ -3283,7 +3827,7 @@ const compromiseWins: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 11,
         pairwiseWins: 0,
@@ -3292,16 +3836,30 @@ const compromiseWins: MockScenario = {
     ],
     condorcetParadox: false,
     dictator: d([
-      { id: 'cn', name: 'Codenames', thumbnail: '', rank: 1, totalVotes: 11, gradeCounts: gc(3, 8, 0, 0, 0, 0) },
       {
-        id: 'ti',
-        name: 'Twilight Imperium',
-        thumbnail: '',
+        id: 'cn',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 1,
+        totalVotes: 11,
+        gradeCounts: gc(3, 8, 0, 0, 0, 0),
+      },
+      {
+        id: 'barrage',
+        name: 'Barrage',
+        thumbnail: thumb('251247'),
         rank: 2,
         totalVotes: 11,
         gradeCounts: gc(4, 0, 3, 0, 0, 4),
       },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 2, totalVotes: 11, gradeCounts: gc(4, 0, 3, 0, 0, 4) },
+      {
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: thumb('13'),
+        rank: 2,
+        totalVotes: 11,
+        gradeCounts: gc(4, 0, 3, 0, 0, 4),
+      },
     ]),
     dictatorName: 'Riley',
   },
@@ -3329,19 +3887,33 @@ const bordaHonest: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 11,
         gradeCounts: gc(5, 2, 4, 0, 0, 0),
       },
-      { id: 'cn', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 11, gradeCounts: gc(2, 9, 0, 0, 0, 0) },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 11, gradeCounts: gc(4, 0, 7, 0, 0, 0) },
+      {
+        id: 'cn',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 2,
+        totalVotes: 11,
+        gradeCounts: gc(2, 9, 0, 0, 0, 0),
+      },
+      {
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: thumb('13'),
+        rank: 3,
+        totalVotes: 11,
+        gradeCounts: gc(4, 0, 7, 0, 0, 0),
+      },
     ],
     star: [
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 1,
         totalVotes: 11,
         starScore: 46,
@@ -3351,7 +3923,7 @@ const bordaHonest: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 11,
         starScore: 45,
@@ -3361,7 +3933,7 @@ const bordaHonest: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 11,
         starScore: 41,
@@ -3372,19 +3944,33 @@ const bordaHonest: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 11,
         gradeCounts: gc(5, 2, 4, 0, 0, 0),
       },
-      { id: 'cn', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 11, gradeCounts: gc(2, 9, 0, 0, 0, 0) },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 11, gradeCounts: gc(4, 0, 7, 0, 0, 0) },
+      {
+        id: 'cn',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 2,
+        totalVotes: 11,
+        gradeCounts: gc(2, 9, 0, 0, 0, 0),
+      },
+      {
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: thumb('13'),
+        rank: 3,
+        totalVotes: 11,
+        gradeCounts: gc(4, 0, 7, 0, 0, 0),
+      },
     ],
     ivstar: [
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 1,
         totalVotes: 11,
         starScore: 46,
@@ -3394,7 +3980,7 @@ const bordaHonest: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 11,
         starScore: 45,
@@ -3404,7 +3990,7 @@ const bordaHonest: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 11,
         starScore: 41,
@@ -3415,7 +4001,7 @@ const bordaHonest: MockScenario = {
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 1,
         totalVotes: 11,
         bordaScore: 13,
@@ -3424,7 +4010,7 @@ const bordaHonest: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 11,
         bordaScore: 12,
@@ -3433,7 +4019,7 @@ const bordaHonest: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 11,
         bordaScore: 8,
@@ -3444,7 +4030,7 @@ const bordaHonest: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 11,
         gradeCounts: gc(5, 2, 4, 0, 0, 0),
@@ -3452,7 +4038,7 @@ const bordaHonest: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 11,
         irvElimRound: 2,
@@ -3461,7 +4047,7 @@ const bordaHonest: MockScenario = {
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 11,
         irvElimRound: 1,
@@ -3472,7 +4058,7 @@ const bordaHonest: MockScenario = {
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 1,
         totalVotes: 11,
         pairwiseWins: 2,
@@ -3481,7 +4067,7 @@ const bordaHonest: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 11,
         pairwiseWins: 1,
@@ -3490,7 +4076,7 @@ const bordaHonest: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 3,
         totalVotes: 11,
         pairwiseWins: 0,
@@ -3499,16 +4085,30 @@ const bordaHonest: MockScenario = {
     ],
     condorcetParadox: false,
     dictator: d([
-      { id: 'cn', name: 'Codenames', thumbnail: '', rank: 1, totalVotes: 11, gradeCounts: gc(2, 9, 0, 0, 0, 0) },
+      {
+        id: 'cn',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 1,
+        totalVotes: 11,
+        gradeCounts: gc(2, 9, 0, 0, 0, 0),
+      },
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 11,
         gradeCounts: gc(5, 2, 4, 0, 0, 0),
       },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 11, gradeCounts: gc(4, 0, 7, 0, 0, 0) },
+      {
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: thumb('13'),
+        rank: 3,
+        totalVotes: 11,
+        gradeCounts: gc(4, 0, 7, 0, 0, 0),
+      },
     ]),
     dictatorName: 'Avery',
   },
@@ -3538,19 +4138,33 @@ const bordaStrategic: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 11,
         gradeCounts: gc(5, 2, 4, 0, 0, 0),
       },
-      { id: 'cn', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 11, gradeCounts: gc(2, 4, 0, 0, 0, 5) },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 11, gradeCounts: gc(4, 0, 7, 0, 0, 0) },
+      {
+        id: 'cn',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 2,
+        totalVotes: 11,
+        gradeCounts: gc(2, 4, 0, 0, 0, 5),
+      },
+      {
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: thumb('13'),
+        rank: 3,
+        totalVotes: 11,
+        gradeCounts: gc(4, 0, 7, 0, 0, 0),
+      },
     ],
     star: [
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 11,
         starScore: 45,
@@ -3560,7 +4174,7 @@ const bordaStrategic: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 11,
         starScore: 41,
@@ -3570,7 +4184,7 @@ const bordaStrategic: MockScenario = {
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 11,
         starScore: 26,
@@ -3581,16 +4195,23 @@ const bordaStrategic: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 11,
         gradeCounts: gc(5, 2, 4, 0, 0, 0),
       },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 2, totalVotes: 11, gradeCounts: gc(4, 0, 7, 0, 0, 0) },
+      {
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: thumb('13'),
+        rank: 2,
+        totalVotes: 11,
+        gradeCounts: gc(4, 0, 7, 0, 0, 0),
+      },
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 11,
         vetoed: true,
@@ -3602,7 +4223,7 @@ const bordaStrategic: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 11,
         starScore: 45,
@@ -3612,7 +4233,7 @@ const bordaStrategic: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 11,
         starScore: 41,
@@ -3622,7 +4243,7 @@ const bordaStrategic: MockScenario = {
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 11,
         starScore: 26,
@@ -3635,7 +4256,7 @@ const bordaStrategic: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 1,
         totalVotes: 11,
         bordaScore: 13,
@@ -3644,7 +4265,7 @@ const bordaStrategic: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 11,
         bordaScore: 12,
@@ -3653,7 +4274,7 @@ const bordaStrategic: MockScenario = {
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 11,
         bordaScore: 8,
@@ -3664,7 +4285,7 @@ const bordaStrategic: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 11,
         gradeCounts: gc(5, 2, 4, 0, 0, 0),
@@ -3672,7 +4293,7 @@ const bordaStrategic: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 2,
         totalVotes: 11,
         irvElimRound: 2,
@@ -3681,7 +4302,7 @@ const bordaStrategic: MockScenario = {
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 11,
         irvElimRound: 1,
@@ -3692,7 +4313,7 @@ const bordaStrategic: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 11,
         pairwiseWins: 1,
@@ -3701,7 +4322,7 @@ const bordaStrategic: MockScenario = {
       {
         id: 'catan',
         name: 'Catan',
-        thumbnail: '',
+        thumbnail: thumb('13'),
         rank: 1,
         totalVotes: 11,
         pairwiseWins: 1,
@@ -3710,7 +4331,7 @@ const bordaStrategic: MockScenario = {
       {
         id: 'cn',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 1,
         totalVotes: 11,
         pairwiseWins: 1,
@@ -3719,16 +4340,30 @@ const bordaStrategic: MockScenario = {
     ],
     condorcetParadox: true,
     dictator: d([
-      { id: 'cn', name: 'Codenames', thumbnail: '', rank: 1, totalVotes: 11, gradeCounts: gc(2, 4, 0, 0, 0, 5) },
+      {
+        id: 'cn',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 1,
+        totalVotes: 11,
+        gradeCounts: gc(2, 4, 0, 0, 0, 5),
+      },
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 11,
         gradeCounts: gc(5, 2, 4, 0, 0, 0),
       },
-      { id: 'catan', name: 'Catan', thumbnail: '', rank: 3, totalVotes: 11, gradeCounts: gc(4, 0, 7, 0, 0, 0) },
+      {
+        id: 'catan',
+        name: 'Catan',
+        thumbnail: thumb('13'),
+        rank: 3,
+        totalVotes: 11,
+        gradeCounts: gc(4, 0, 7, 0, 0, 0),
+      },
     ]),
     dictatorName: 'Avery',
   },
@@ -3756,19 +4391,33 @@ const teamingBefore: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 12,
         gradeCounts: gc(7, 0, 5, 0, 0, 0),
       },
-      { id: 'pan', name: 'Pandemic', thumbnail: '', rank: 2, totalVotes: 12, gradeCounts: gc(5, 0, 7, 0, 0, 0) },
-      { id: 'code', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 12, gradeCounts: gc(0, 0, 0, 0, 0, 12) },
+      {
+        id: 'pan',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 2,
+        totalVotes: 12,
+        gradeCounts: gc(5, 0, 7, 0, 0, 0),
+      },
+      {
+        id: 'code',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 3,
+        totalVotes: 12,
+        gradeCounts: gc(0, 0, 0, 0, 0, 12),
+      },
     ],
     star: [
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 12,
         starScore: 50,
@@ -3778,7 +4427,7 @@ const teamingBefore: MockScenario = {
       {
         id: 'pan',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 2,
         totalVotes: 12,
         starScore: 46,
@@ -3788,7 +4437,7 @@ const teamingBefore: MockScenario = {
       {
         id: 'code',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 12,
         starScore: 0,
@@ -3799,16 +4448,23 @@ const teamingBefore: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 12,
         gradeCounts: gc(7, 0, 5, 0, 0, 0),
       },
-      { id: 'pan', name: 'Pandemic', thumbnail: '', rank: 2, totalVotes: 12, gradeCounts: gc(5, 0, 7, 0, 0, 0) },
+      {
+        id: 'pan',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 2,
+        totalVotes: 12,
+        gradeCounts: gc(5, 0, 7, 0, 0, 0),
+      },
       {
         id: 'code',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 12,
         vetoed: true,
@@ -3820,7 +4476,7 @@ const teamingBefore: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 12,
         starScore: 50,
@@ -3830,7 +4486,7 @@ const teamingBefore: MockScenario = {
       {
         id: 'pan',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 2,
         totalVotes: 12,
         starScore: 46,
@@ -3840,7 +4496,7 @@ const teamingBefore: MockScenario = {
       {
         id: 'code',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 12,
         starScore: 0,
@@ -3853,7 +4509,7 @@ const teamingBefore: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 12,
         bordaScore: 19,
@@ -3862,7 +4518,7 @@ const teamingBefore: MockScenario = {
       {
         id: 'pan',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 2,
         totalVotes: 12,
         bordaScore: 17,
@@ -3871,7 +4527,7 @@ const teamingBefore: MockScenario = {
       {
         id: 'code',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 12,
         bordaScore: 0,
@@ -3882,7 +4538,7 @@ const teamingBefore: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 12,
         gradeCounts: gc(7, 0, 5, 0, 0, 0),
@@ -3890,7 +4546,7 @@ const teamingBefore: MockScenario = {
       {
         id: 'pan',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 2,
         totalVotes: 12,
         irvElimRound: 2,
@@ -3899,7 +4555,7 @@ const teamingBefore: MockScenario = {
       {
         id: 'code',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 12,
         irvElimRound: 1,
@@ -3910,7 +4566,7 @@ const teamingBefore: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 12,
         pairwiseWins: 2,
@@ -3919,7 +4575,7 @@ const teamingBefore: MockScenario = {
       {
         id: 'pan',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 2,
         totalVotes: 12,
         pairwiseWins: 1,
@@ -3928,7 +4584,7 @@ const teamingBefore: MockScenario = {
       {
         id: 'code',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 12,
         pairwiseWins: 0,
@@ -3940,13 +4596,27 @@ const teamingBefore: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 12,
         gradeCounts: gc(7, 0, 5, 0, 0, 0),
       },
-      { id: 'pan', name: 'Pandemic', thumbnail: '', rank: 2, totalVotes: 12, gradeCounts: gc(5, 0, 7, 0, 0, 0) },
-      { id: 'code', name: 'Codenames', thumbnail: '', rank: 3, totalVotes: 12, gradeCounts: gc(0, 0, 0, 0, 0, 12) },
+      {
+        id: 'pan',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 2,
+        totalVotes: 12,
+        gradeCounts: gc(5, 0, 7, 0, 0, 0),
+      },
+      {
+        id: 'code',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 3,
+        totalVotes: 12,
+        gradeCounts: gc(0, 0, 0, 0, 0, 12),
+      },
     ]),
     dictatorName: 'Morgan',
   },
@@ -3954,19 +4624,19 @@ const teamingBefore: MockScenario = {
 
 // ─── Scenario: Borda Teaming — After ─────────────────────────────────────────
 // Same 12 voters, same preferences. Pandemic-fans have nominated three more
-// co-ops they love (Spirit Island, Forbidden Island, Sky Team). Brass-fans
+// co-ops they love (Spirit Island, Forbidden Island, The Crew). Brass-fans
 // rank those clones low, brass high; Pandemic-fans put them just under
 // Pandemic. With 6 candidates, Borda's rank-based points now reward Pandemic
 // for being #1 with the Pandemic-fans AND above Brass on their ballots —
 // while Brass-fans spread their middle-to-low points across the co-ops.
 // Borda: pan=46, brass=40, spirit=34, code=28, forbidden=22, sky=10.
 // Every other method — STAR (via runoff), MJ, IV·MJ, IV·STAR, IRV, Condorcet
-// — still picks Brass. IV·MJ vetoes Codenames (5/12 P) and Sky Team (7/12 P).
+// — still picks Brass. IV·MJ vetoes Codenames (5/12 P) and The Crew (7/12 P).
 const teamingAfter: MockScenario = {
   id: 'mock-borda-teaming-after',
   label: 'Borda Teaming — After',
   description:
-    'Same 12 voters, same preferences — but Pandemic-fans nominated three more co-ops (Spirit Island, Forbidden Island, Sky Team). Borda now picks Pandemic. Every other method still picks Brass, catching the clone attack.',
+    'Same 12 voters, same preferences — but Pandemic-fans nominated three more co-ops (Spirit Island, Forbidden Island, The Crew). Borda now picks Pandemic. Every other method still picks Brass, catching the clone attack.',
   related: { id: 'mock-borda-teaming-before', label: 'Borda Teaming — Before' },
   tally: {
     ballotId: 0,
@@ -3977,17 +4647,31 @@ const teamingAfter: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 12,
         gradeCounts: gc(7, 0, 0, 0, 5, 0),
       },
-      { id: 'code', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 12, gradeCounts: gc(0, 7, 0, 0, 0, 5) },
-      { id: 'pan', name: 'Pandemic', thumbnail: '', rank: 3, totalVotes: 12, gradeCounts: gc(5, 0, 7, 0, 0, 0) },
+      {
+        id: 'code',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 2,
+        totalVotes: 12,
+        gradeCounts: gc(0, 7, 0, 0, 0, 5),
+      },
+      {
+        id: 'pan',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 3,
+        totalVotes: 12,
+        gradeCounts: gc(5, 0, 7, 0, 0, 0),
+      },
       {
         id: 'spirit',
         name: 'Spirit Island',
-        thumbnail: '',
+        thumbnail: thumb('162886'),
         rank: 4,
         totalVotes: 12,
         gradeCounts: gc(0, 5, 0, 7, 0, 0),
@@ -3995,18 +4679,25 @@ const teamingAfter: MockScenario = {
       {
         id: 'forbidden',
         name: 'Forbidden Island',
-        thumbnail: '',
+        thumbnail: thumb('65244'),
         rank: 5,
         totalVotes: 12,
         gradeCounts: gc(0, 0, 5, 0, 7, 0),
       },
-      { id: 'sky', name: 'Sky Team', thumbnail: '', rank: 6, totalVotes: 12, gradeCounts: gc(0, 0, 0, 5, 0, 7) },
+      {
+        id: 'crew',
+        name: 'The Crew: Mission Deep Sea',
+        thumbnail: thumb('324856'),
+        rank: 6,
+        totalVotes: 12,
+        gradeCounts: gc(0, 0, 0, 5, 0, 7),
+      },
     ],
     star: [
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 12,
         starScore: 40,
@@ -4016,7 +4707,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'pan',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 2,
         totalVotes: 12,
         starScore: 46,
@@ -4026,7 +4717,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'spirit',
         name: 'Spirit Island',
-        thumbnail: '',
+        thumbnail: thumb('162886'),
         rank: 3,
         totalVotes: 12,
         starScore: 34,
@@ -4035,7 +4726,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'code',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 4,
         totalVotes: 12,
         starScore: 28,
@@ -4044,16 +4735,16 @@ const teamingAfter: MockScenario = {
       {
         id: 'forbidden',
         name: 'Forbidden Island',
-        thumbnail: '',
+        thumbnail: thumb('65244'),
         rank: 5,
         totalVotes: 12,
         starScore: 22,
         gradeCounts: gc(0, 0, 5, 0, 7, 0),
       },
       {
-        id: 'sky',
-        name: 'Sky Team',
-        thumbnail: '',
+        id: 'crew',
+        name: 'The Crew: Mission Deep Sea',
+        thumbnail: thumb('324856'),
         rank: 6,
         totalVotes: 12,
         starScore: 10,
@@ -4064,16 +4755,23 @@ const teamingAfter: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 12,
         gradeCounts: gc(7, 0, 0, 0, 5, 0),
       },
-      { id: 'pan', name: 'Pandemic', thumbnail: '', rank: 2, totalVotes: 12, gradeCounts: gc(5, 0, 7, 0, 0, 0) },
+      {
+        id: 'pan',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 2,
+        totalVotes: 12,
+        gradeCounts: gc(5, 0, 7, 0, 0, 0),
+      },
       {
         id: 'spirit',
         name: 'Spirit Island',
-        thumbnail: '',
+        thumbnail: thumb('162886'),
         rank: 3,
         totalVotes: 12,
         gradeCounts: gc(0, 5, 0, 7, 0, 0),
@@ -4081,7 +4779,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'forbidden',
         name: 'Forbidden Island',
-        thumbnail: '',
+        thumbnail: thumb('65244'),
         rank: 4,
         totalVotes: 12,
         gradeCounts: gc(0, 0, 5, 0, 7, 0),
@@ -4089,7 +4787,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'code',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 5,
         totalVotes: 12,
         vetoed: true,
@@ -4097,9 +4795,9 @@ const teamingAfter: MockScenario = {
         gradeCounts: gc(0, 7, 0, 0, 0, 5),
       },
       {
-        id: 'sky',
-        name: 'Sky Team',
-        thumbnail: '',
+        id: 'crew',
+        name: 'The Crew: Mission Deep Sea',
+        thumbnail: thumb('324856'),
         rank: 6,
         totalVotes: 12,
         vetoed: true,
@@ -4111,7 +4809,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 12,
         starScore: 40,
@@ -4121,7 +4819,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'pan',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 2,
         totalVotes: 12,
         starScore: 46,
@@ -4131,7 +4829,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'spirit',
         name: 'Spirit Island',
-        thumbnail: '',
+        thumbnail: thumb('162886'),
         rank: 3,
         totalVotes: 12,
         starScore: 34,
@@ -4140,7 +4838,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'forbidden',
         name: 'Forbidden Island',
-        thumbnail: '',
+        thumbnail: thumb('65244'),
         rank: 4,
         totalVotes: 12,
         starScore: 22,
@@ -4149,7 +4847,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'code',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 5,
         totalVotes: 12,
         starScore: 28,
@@ -4158,9 +4856,9 @@ const teamingAfter: MockScenario = {
         gradeCounts: gc(0, 7, 0, 0, 0, 5),
       },
       {
-        id: 'sky',
-        name: 'Sky Team',
-        thumbnail: '',
+        id: 'crew',
+        name: 'The Crew: Mission Deep Sea',
+        thumbnail: thumb('324856'),
         rank: 6,
         totalVotes: 12,
         starScore: 10,
@@ -4173,7 +4871,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'pan',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 1,
         totalVotes: 12,
         bordaScore: 46,
@@ -4182,7 +4880,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 2,
         totalVotes: 12,
         bordaScore: 40,
@@ -4191,7 +4889,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'spirit',
         name: 'Spirit Island',
-        thumbnail: '',
+        thumbnail: thumb('162886'),
         rank: 3,
         totalVotes: 12,
         bordaScore: 34,
@@ -4200,7 +4898,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'code',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 4,
         totalVotes: 12,
         bordaScore: 28,
@@ -4209,16 +4907,16 @@ const teamingAfter: MockScenario = {
       {
         id: 'forbidden',
         name: 'Forbidden Island',
-        thumbnail: '',
+        thumbnail: thumb('65244'),
         rank: 5,
         totalVotes: 12,
         bordaScore: 22,
         gradeCounts: gc(0, 0, 5, 0, 7, 0),
       },
       {
-        id: 'sky',
-        name: 'Sky Team',
-        thumbnail: '',
+        id: 'crew',
+        name: 'The Crew: Mission Deep Sea',
+        thumbnail: thumb('324856'),
         rank: 6,
         totalVotes: 12,
         bordaScore: 10,
@@ -4229,7 +4927,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 12,
         gradeCounts: gc(7, 0, 0, 0, 5, 0),
@@ -4237,7 +4935,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'pan',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 2,
         totalVotes: 12,
         irvElimRound: 2,
@@ -4246,7 +4944,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'code',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 3,
         totalVotes: 12,
         irvElimRound: 1,
@@ -4255,7 +4953,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'spirit',
         name: 'Spirit Island',
-        thumbnail: '',
+        thumbnail: thumb('162886'),
         rank: 3,
         totalVotes: 12,
         irvElimRound: 1,
@@ -4264,16 +4962,16 @@ const teamingAfter: MockScenario = {
       {
         id: 'forbidden',
         name: 'Forbidden Island',
-        thumbnail: '',
+        thumbnail: thumb('65244'),
         rank: 3,
         totalVotes: 12,
         irvElimRound: 1,
         gradeCounts: gc(0, 0, 5, 0, 7, 0),
       },
       {
-        id: 'sky',
-        name: 'Sky Team',
-        thumbnail: '',
+        id: 'crew',
+        name: 'The Crew: Mission Deep Sea',
+        thumbnail: thumb('324856'),
         rank: 3,
         totalVotes: 12,
         irvElimRound: 1,
@@ -4284,7 +4982,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 12,
         pairwiseWins: 5,
@@ -4293,7 +4991,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'code',
         name: 'Codenames',
-        thumbnail: '',
+        thumbnail: thumb('178900'),
         rank: 2,
         totalVotes: 12,
         pairwiseWins: 4,
@@ -4302,7 +5000,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'pan',
         name: 'Pandemic',
-        thumbnail: '',
+        thumbnail: thumb('30549'),
         rank: 3,
         totalVotes: 12,
         pairwiseWins: 3,
@@ -4311,7 +5009,7 @@ const teamingAfter: MockScenario = {
       {
         id: 'spirit',
         name: 'Spirit Island',
-        thumbnail: '',
+        thumbnail: thumb('162886'),
         rank: 4,
         totalVotes: 12,
         pairwiseWins: 2,
@@ -4320,16 +5018,16 @@ const teamingAfter: MockScenario = {
       {
         id: 'forbidden',
         name: 'Forbidden Island',
-        thumbnail: '',
+        thumbnail: thumb('65244'),
         rank: 5,
         totalVotes: 12,
         pairwiseWins: 1,
         gradeCounts: gc(0, 0, 5, 0, 7, 0),
       },
       {
-        id: 'sky',
-        name: 'Sky Team',
-        thumbnail: '',
+        id: 'crew',
+        name: 'The Crew: Mission Deep Sea',
+        thumbnail: thumb('324856'),
         rank: 6,
         totalVotes: 12,
         pairwiseWins: 0,
@@ -4341,17 +5039,31 @@ const teamingAfter: MockScenario = {
       {
         id: 'brass',
         name: 'Brass Birmingham',
-        thumbnail: '',
+        thumbnail: thumb('224517'),
         rank: 1,
         totalVotes: 12,
         gradeCounts: gc(7, 0, 0, 0, 5, 0),
       },
-      { id: 'code', name: 'Codenames', thumbnail: '', rank: 2, totalVotes: 12, gradeCounts: gc(0, 7, 0, 0, 0, 5) },
-      { id: 'pan', name: 'Pandemic', thumbnail: '', rank: 3, totalVotes: 12, gradeCounts: gc(5, 0, 7, 0, 0, 0) },
+      {
+        id: 'code',
+        name: 'Codenames',
+        thumbnail: thumb('178900'),
+        rank: 2,
+        totalVotes: 12,
+        gradeCounts: gc(0, 7, 0, 0, 0, 5),
+      },
+      {
+        id: 'pan',
+        name: 'Pandemic',
+        thumbnail: thumb('30549'),
+        rank: 3,
+        totalVotes: 12,
+        gradeCounts: gc(5, 0, 7, 0, 0, 0),
+      },
       {
         id: 'spirit',
         name: 'Spirit Island',
-        thumbnail: '',
+        thumbnail: thumb('162886'),
         rank: 4,
         totalVotes: 12,
         gradeCounts: gc(0, 5, 0, 7, 0, 0),
@@ -4359,12 +5071,19 @@ const teamingAfter: MockScenario = {
       {
         id: 'forbidden',
         name: 'Forbidden Island',
-        thumbnail: '',
+        thumbnail: thumb('65244'),
         rank: 5,
         totalVotes: 12,
         gradeCounts: gc(0, 0, 5, 0, 7, 0),
       },
-      { id: 'sky', name: 'Sky Team', thumbnail: '', rank: 6, totalVotes: 12, gradeCounts: gc(0, 0, 0, 5, 0, 7) },
+      {
+        id: 'crew',
+        name: 'The Crew: Mission Deep Sea',
+        thumbnail: thumb('324856'),
+        rank: 6,
+        totalVotes: 12,
+        gradeCounts: gc(0, 0, 0, 5, 0, 7),
+      },
     ]),
     dictatorName: 'Morgan',
   },

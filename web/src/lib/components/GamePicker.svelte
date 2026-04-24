@@ -35,7 +35,7 @@ async function fetchCollection() {
     const result = await getBggCollection(username);
     if ('retry' in result) {
       retrying = true;
-      setTimeout(fetchCollection, 3000);
+      setTimeout(fetchCollection, 10000);
       return;
     }
     retrying = false;
@@ -77,26 +77,44 @@ function switchToBgg() {
     <div class="error-section">
       <p class="error-msg">{error}</p>
       <div class="mode-actions">
-        <button type="button" class="btn btn-ghost btn-sm" onclick={fetchCollection}>Retry BGG</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick={switchToManual}>Enter games manually</button>
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm"
+          onclick={fetchCollection}>Retry BGG</button
+        >
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm"
+          onclick={switchToManual}>Enter games manually</button
+        >
       </div>
     </div>
   {:else}
     {#if !error}
       <div class="mode-bar">
         {#if useManual}
-          <button type="button" class="mode-btn active" disabled>Manual entry</button>
-          <button type="button" class="mode-btn" onclick={switchToBgg}>BGG collection</button>
+          <button type="button" class="mode-btn active" disabled
+            >Manual entry</button
+          >
+          <button type="button" class="mode-btn" onclick={switchToBgg}
+            >BGG collection</button
+          >
         {:else}
-          <button type="button" class="mode-btn active" disabled>BGG collection</button>
-          <button type="button" class="mode-btn" onclick={switchToManual}>Manual entry</button>
+          <button type="button" class="mode-btn active" disabled
+            >BGG collection</button
+          >
+          <button type="button" class="mode-btn" onclick={switchToManual}
+            >Manual entry</button
+          >
         {/if}
       </div>
     {/if}
 
     {#if useManual}
       <div class="manual-entry">
-        <label for="manual-names" class="manual-label">Enter one game name per line:</label>
+        <label for="manual-names" class="manual-label"
+          >Enter one game name per line:</label
+        >
         <textarea
           id="manual-names"
           placeholder="Wingspan&#10;Terraforming Mars&#10;Ticket to Ride"
@@ -141,23 +159,32 @@ function switchToBgg() {
 </div>
 
 <style>
-  .status { color: var(--text-muted); margin: 1rem 0; }
+  .status {
+    color: var(--text-muted);
+    margin: 1rem 0;
+  }
 
-  .error-section { margin: 1rem 0; }
-  .mode-actions { display: flex; gap: .5rem; margin-top: .75rem; }
+  .error-section {
+    margin: 1rem 0;
+  }
+  .mode-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
 
   .mode-bar {
     display: flex;
-    gap: .5rem;
+    gap: 0.5rem;
     margin-bottom: 1rem;
   }
   .mode-btn {
-    padding: .3rem .75rem;
+    padding: 0.3rem 0.75rem;
     border: 1.5px solid var(--border);
     border-radius: 6px;
     background: var(--bg);
     color: var(--text-muted);
-    font-size: .8rem;
+    font-size: 0.8rem;
     cursor: pointer;
   }
   .mode-btn.active {
@@ -171,18 +198,18 @@ function switchToBgg() {
   }
   .manual-label {
     display: block;
-    font-size: .85rem;
-    margin-bottom: .4rem;
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
     color: var(--text-muted);
   }
   textarea {
     width: 100%;
-    padding: .5rem .75rem;
+    padding: 0.5rem 0.75rem;
     border: 1.5px solid var(--border);
     border-radius: 6px;
     background: var(--bg);
     color: var(--text);
-    font-size: .9rem;
+    font-size: 0.9rem;
     resize: vertical;
     box-sizing: border-box;
   }
@@ -195,7 +222,7 @@ function switchToBgg() {
   }
 
   .count {
-    font-size: .85rem;
+    font-size: 0.85rem;
     color: var(--text-muted);
     white-space: nowrap;
   }
@@ -203,24 +230,26 @@ function switchToBgg() {
   .game-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: .5rem;
+    gap: 0.5rem;
     max-height: 400px;
     overflow-y: auto;
-    padding: .25rem;
+    padding: 0.25rem;
   }
 
   .game-tile {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: .35rem;
-    padding: .6rem .4rem;
+    gap: 0.35rem;
+    padding: 0.6rem 0.4rem;
     border-radius: 7px;
     border: 1.5px solid var(--border);
     background: var(--bg);
     cursor: pointer;
     position: relative;
-    transition: border-color .15s, background .15s;
+    transition:
+      border-color 0.15s,
+      background 0.15s;
     text-align: center;
   }
 
@@ -238,26 +267,27 @@ function switchToBgg() {
     width: 64px;
     height: 64px;
     object-fit: cover;
+    object-position: top center;
     border-radius: 4px;
   }
 
   .game-label {
-    font-size: .72rem;
+    font-size: 0.72rem;
     line-height: 1.3;
     color: var(--text);
   }
 
   .check {
     position: absolute;
-    top: .3rem;
-    right: .4rem;
-    font-size: .8rem;
+    top: 0.3rem;
+    right: 0.4rem;
+    font-size: 0.8rem;
     color: var(--accent);
     font-weight: 700;
   }
 
   .btn-sm {
-    padding: .3rem .75rem;
-    font-size: .85rem;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.85rem;
   }
 </style>

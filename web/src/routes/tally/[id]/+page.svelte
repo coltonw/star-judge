@@ -67,6 +67,13 @@ const officialMethod = $derived(tally?.officialMethod ?? 'mj');
 const methods = $derived(tally ? summarizeMethods(tally) : []);
 const consensusWinner = $derived(tally ? computeConsensus(tally, methods) : null);
 const tiebreaker = $derived(tally ? pickTiebreaker(tally, consensusWinner) : null);
+const officialWinnerThumbnail = $derived.by(() => {
+  if (!tally) return null;
+  const name = consensusWinner ?? methods.find((m) => m.key === officialMethod)?.winner;
+  if (!name || name.includes('tie') || name.startsWith('🔄')) return null;
+  const candidates = tally[officialMethod] as Array<{ name: string; thumbnail?: string }>;
+  return candidates?.find((c) => c.name === name)?.thumbnail ?? null;
+});
 const anyVetoedInMJ = $derived(tally?.ivmj.some((c) => c.vetoed) ?? false);
 const anyVetoedInStar = $derived(tally?.ivstar.some((c) => c.vetoed) ?? false);
 const pairs = $derived(orderedPairs(officialMethod));
@@ -128,6 +135,9 @@ function emptyNoteFor(key: VotingMethodKey): string | undefined {
     </div>
   {:else}
     <div class="winners card">
+      {#if officialWinnerThumbnail}
+        <img src={officialWinnerThumbnail} alt="Winner" class="winner-thumb" />
+      {/if}
       {#if consensusWinner}
         {#if tiebreaker}
           <div class="winner-agree">
@@ -280,6 +290,16 @@ function emptyNoteFor(key: VotingMethodKey): string | undefined {
     margin-bottom: 1.5rem;
     padding: 1.25rem;
     text-align: center;
+  }
+
+  .winner-thumb {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    object-position: top center;
+    border-radius: 8px;
+    display: block;
+    margin: 0 auto 1rem;
   }
 
   .winner-agree {

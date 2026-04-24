@@ -129,36 +129,38 @@ async function submit() {
     <div class="games">
       {#each ballot.candidates as candidate (candidate.id)}
         <div class="game-card card">
-          <div class="game-info">
-            {#if candidate.thumbnail}
+          {#if candidate.thumbnail}
+            <div class="thumb-wrap">
               <img
                 src={candidate.thumbnail}
                 alt={candidate.name}
                 class="thumb"
               />
-            {/if}
+            </div>
+          {/if}
+          <div class="game-right">
             <span class="game-name">{candidate.name}</span>
-          </div>
-          <div
-            class="grade-picker"
-            role="group"
-            aria-label="Rating for {candidate.name}"
-          >
-            {#each GRADES as grade}
-              <label
-                class="grade-btn"
-                class:selected={ratings[candidate.id] === grade}
-                style:--grade-color={GRADE_COLORS[grade]}
-              >
-                <input
-                  type="radio"
-                  name={candidate.id}
-                  value={grade}
-                  bind:group={ratings[candidate.id]}
-                />
-                {GRADE_LABELS[grade]}
-              </label>
-            {/each}
+            <div
+              class="grade-picker"
+              role="group"
+              aria-label="Rating for {candidate.name}"
+            >
+              {#each GRADES as grade}
+                <label
+                  class="grade-btn"
+                  class:selected={ratings[candidate.id] === grade}
+                  style:--grade-color={GRADE_COLORS[grade]}
+                >
+                  <input
+                    type="radio"
+                    name={candidate.id}
+                    value={grade}
+                    bind:group={ratings[candidate.id]}
+                  />
+                  {GRADE_LABELS[grade]}
+                </label>
+              {/each}
+            </div>
           </div>
         </div>
       {/each}
@@ -198,22 +200,44 @@ async function submit() {
   }
 
   .game-card {
-    padding: 1rem 1.25rem;
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    overflow: hidden;
   }
 
-  .game-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
+  .thumb-wrap {
+    position: relative;
+    width: 90px;
+    flex-shrink: 0;
+    align-self: stretch;
+  }
+
+  @media (min-width: 600px) {
+    .thumb-wrap {
+      width: 130px;
+    }
+    .game-card {
+      min-height: 130px;
+    }
   }
 
   .thumb {
-    width: 44px;
-    height: 44px;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    border-radius: 4px;
-    flex-shrink: 0;
+    object-position: top center;
+  }
+
+  .game-right {
+    flex: 1;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
   }
 
   .game-name {

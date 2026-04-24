@@ -5,3 +5,4 @@ dist/
 .env.local
 *.local
 api/.dev.vars
+_*.ts
