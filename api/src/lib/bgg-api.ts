@@ -49,10 +49,25 @@ export function parseXmlCollection(xml: string): RawBggCandidate[] {
   return candidates.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-// Fetches the BGG collection XML, using the Worker Cache API to avoid hammering
-// BGG across requests within the same edge cache window. Pass-through of 202
-// and non-ok responses so callers can handle BGG's queued-response behavior.
+const COLLECTION_TTL_MS = 6 * 60 * 60 * 1000;
+const collectionKey = (username: string) => `bgg-xml/collection-${username}.xml`;
+
+// Caches the BGG collection XML in R2 because `caches.default` is a no-op on
+// workers.dev subdomains. Pass-through of 202 and non-ok responses so callers
+// can handle BGG's queued-response behavior.
 export async function fetchBggCollectionXml(env: Bindings, username: string): Promise<Response> {
+  const key = collectionKey(username);
+  const cached = await env.BGG_IMAGES.get(key);
+  if (cached) {
+    const fetchedAt = Number(cached.customMetadata?.fetchedAt ?? 0);
+    if (Number.isFinite(fetchedAt) && Date.now() - fetchedAt < COLLECTION_TTL_MS) {
+      return new Response(cached.body, {
+        status: 200,
+        headers: { 'content-type': 'application/xml' },
+      });
+    }
+  }
+
   const params = new URLSearchParams({
     username,
     own: '1',
@@ -63,16 +78,16 @@ export async function fetchBggCollectionXml(env: Bindings, username: string): Pr
   const headers: Record<string, string> = { Accept: 'application/xml' };
   if (env.BGG_API_KEY) headers.Authorization = `Bearer ${env.BGG_API_KEY}`;
 
-  const cacheKey = new Request(`https://bgg-xml-cache.invalid/collection?${params}`, { method: 'GET' });
-  const cache = caches.default;
-  const cached = await cache.match(cacheKey);
-  if (cached) return cached;
-
   const fresh = await fetch(`${BGG_API}/collection?${params}`, { headers });
-  if (fresh.ok) {
-    const toCache = new Response(fresh.clone().body, fresh);
-    toCache.headers.set('Cache-Control', 'public, max-age=600');
-    await cache.put(cacheKey, toCache);
-  }
-  return fresh;
+  if (!fresh.ok) return fresh;
+
+  const xml = await fresh.text();
+  await env.BGG_IMAGES.put(key, xml, {
+    customMetadata: { fetchedAt: String(Date.now()) },
+    httpMetadata: { contentType: 'application/xml' },
+  });
+  return new Response(xml, {
+    status: 200,
+    headers: { 'content-type': 'application/xml' },
+  });
 }
