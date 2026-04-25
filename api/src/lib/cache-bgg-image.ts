@@ -14,12 +14,18 @@ export async function isBggImageCached(env: Bindings, bggId: string): Promise<bo
 
 // Fetches sourceUrl from BGG and writes it to R2 if missing. Returns the public
 // URL on success, or null if the fetch fails. Safe to call redundantly — it
-// short-circuits on cache hit.
-export async function cacheBggImage(env: Bindings, bggId: string, sourceUrl: string): Promise<string | null> {
+// short-circuits on cache hit. Pass `skipCheck` when the caller has already
+// confirmed the object is missing, to avoid a redundant HEAD subrequest.
+export async function cacheBggImage(
+  env: Bindings,
+  bggId: string,
+  sourceUrl: string,
+  options?: { skipCheck?: boolean }
+): Promise<string | null> {
   if (!sourceUrl) return null;
   const key = bggImageKey(bggId);
 
-  if (await isBggImageCached(env, bggId)) {
+  if (!options?.skipCheck && (await isBggImageCached(env, bggId))) {
     return bggImagePublicUrl(env, bggId);
   }
 
