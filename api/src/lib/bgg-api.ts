@@ -8,6 +8,24 @@ export interface RawBggCandidate {
   bggThumbnailUrl: string;
 }
 
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+};
+
+function decodeXmlEntities(s: string): string {
+  return s.replace(/&(#x[0-9a-fA-F]+|#\d+|[a-zA-Z]+);/g, (match, body: string) => {
+    if (body[0] === '#') {
+      const code = body[1] === 'x' ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+    }
+    return NAMED_ENTITIES[body] ?? match;
+  });
+}
+
 export function parseXmlCollection(xml: string): RawBggCandidate[] {
   const candidates: RawBggCandidate[] = [];
   const itemRegex = /<item[^>]* objectid="(\d+)"[^>]*>([\s\S]*?)<\/item>/g;
@@ -22,8 +40,8 @@ export function parseXmlCollection(xml: string): RawBggCandidate[] {
     if (nameMatch) {
       candidates.push({
         id,
-        name: nameMatch[1].trim(),
-        bggThumbnailUrl: thumbnailMatch ? thumbnailMatch[1].trim() : '',
+        name: decodeXmlEntities(nameMatch[1].trim()),
+        bggThumbnailUrl: thumbnailMatch ? decodeXmlEntities(thumbnailMatch[1].trim()) : '',
       });
     }
   }
