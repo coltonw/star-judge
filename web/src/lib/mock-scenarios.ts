@@ -1,10 +1,12 @@
-import type { Grade, RankedCandidate, TallyResponse } from '@star-judge/shared';
+import type { Candidate, Grade, TallyResponse, Vote, VotingMethodKey } from '@star-judge/shared';
+import { buildTally } from '@star-judge/voting';
 
 // Resolves a BGG game id to the R2 public URL used by the rest of the app.
 // Empty string if no base is configured (falls back to text-only tiles).
 const BGG_IMG_BASE = import.meta.env.VITE_BGG_IMAGES_BASE ?? '';
 const thumb = (bggId: string): string => (BGG_IMG_BASE ? `${BGG_IMG_BASE}/bgg/${bggId}.jpg` : '');
 
+// ─── Public shape (unchanged) ────────────────────────────────────────────────
 export interface MockScenario {
   id: string;
   label: string;
@@ -13,5085 +15,537 @@ export interface MockScenario {
   related?: { id: string; label: string };
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-// gradeCounts shorthand
-type GC = { excellent: number; verygood: number; good: number; average: number; fair: number; poor: number };
-const gc = (e: number, vg: number, g: number, av: number, f: number, p: number): GC => ({
-  excellent: e,
-  verygood: vg,
-  good: g,
-  average: av,
-  fair: f,
-  poor: p,
-});
-
-// Rank-indexed preference lists: rank N prefers the Nth grade, falling back to
-// nearest grades that actually have nonzero votes (so the highlight lands on a
-// visible segment in the chart).
-const DICT_PREFS: Grade[][] = [
-  ['excellent', 'verygood', 'good', 'average', 'fair', 'poor'],
-  ['verygood', 'good', 'excellent', 'average', 'fair', 'poor'],
-  ['good', 'verygood', 'average', 'excellent', 'fair', 'poor'],
-  ['average', 'good', 'fair', 'verygood', 'poor', 'excellent'],
-  ['fair', 'poor', 'average', 'good', 'verygood', 'excellent'],
-  ['poor', 'fair', 'average', 'good', 'verygood', 'excellent'],
-];
-
-function pickDictatorGrade(rank: number, counts: GC): Grade {
-  const prefs = DICT_PREFS[Math.min(Math.max(rank, 1), 6) - 1];
-  return prefs.find((g) => counts[g] > 0) ?? 'poor';
+// ─── Internal definition ─────────────────────────────────────────────────────
+interface ScenarioDef {
+  id: string;
+  label: string;
+  description: string;
+  ballotName: string;
+  officialMethod: VotingMethodKey;
+  candidates: Candidate[];
+  ballots: BallotDef[];
+  related?: { id: string; label: string };
 }
 
-// Wraps a dictator array and populates dictatorGrade on each entry, based on
-// the candidate's rank and which grades actually received votes.
-const d = <T extends Omit<RankedCandidate, 'dictatorGrade'>>(entries: T[]): (T & { dictatorGrade: Grade })[] =>
-  entries.map((e) => ({ ...e, dictatorGrade: pickDictatorGrade(e.rank, e.gradeCounts as GC) }));
+interface BallotDef {
+  voter: string;
+  ratings: Record<string, Grade>;
+}
 
-// ─── Scenario 1: Methods Disagree ────────────────────────────────────────────
-// MJ: Catan #1 (Excellent median, polarizing 4E+3P).
-// STAR: Pandemic #1 (7 VG = score 28, consistent crowd-pleaser).
-// Borda/IRV/Condorcet: Pandemic wins (consistent middle-high beats polarizer).
-// Dictator: "Sam" picks Catan (personal enthusiasm).
-const diverge: MockScenario = {
+// ─── Vote-block helpers ──────────────────────────────────────────────────────
+// Build N ballots that share the same ratings, with auto-numbered voter names.
+function block(n: number, namePrefix: string, ratings: Record<string, Grade>): BallotDef[] {
+  return Array.from({ length: n }, (_, i) => ({ voter: `${namePrefix} ${i + 1}`, ratings }));
+}
+function ballot(voter: string, ratings: Record<string, Grade>): BallotDef {
+  return { voter, ratings };
+}
+
+// Realize a BallotDef as a Vote (only voter_name + ratings are used by rankers).
+let _seq = 0;
+function realize(b: BallotDef): Vote {
+  _seq++;
+  return {
+    id: _seq,
+    ballot_id: 0,
+    voter_name: b.voter,
+    session_id: `mock-${_seq}`,
+    ratings: b.ratings,
+    created_at: '',
+  };
+}
+
+// ─── Candidates shared across scenarios ──────────────────────────────────────
+const C = {
+  harmonies: { id: 'harmonies', name: 'Harmonies', thumbnail: thumb('414317') },
+  catan: { id: 'catan', name: 'Catan', thumbnail: thumb('13') },
+  pandemic: { id: 'pandemic', name: 'Pandemic', thumbnail: thumb('30549') },
+  codenames: { id: 'codenames', name: 'Codenames', thumbnail: thumb('178900') },
+  ttr: { id: 'ttr', name: 'Ticket to Ride', thumbnail: thumb('9209') },
+  ra: { id: 'ra', name: 'Ra', thumbnail: thumb('12') },
+  terra: { id: 'terra', name: 'Terra Mystica', thumbnail: thumb('120677') },
+  cosmic: { id: 'cosmic', name: 'Cosmic Encounter', thumbnail: thumb('39463') },
+  powergrid: { id: 'powergrid', name: 'Power Grid', thumbnail: thumb('2651') },
+  barrage: { id: 'barrage', name: 'Barrage', thumbnail: thumb('251247') },
+  brass: { id: 'brass', name: 'Brass Birmingham', thumbnail: thumb('224517') },
+  dom: { id: 'dom', name: 'Dominion', thumbnail: thumb('36218') },
+  odin: { id: 'odin', name: 'A Feast for Odin', thumbnail: thumb('177736') },
+  tokaido: { id: 'tokaido', name: 'Tokaido', thumbnail: thumb('123540') },
+  spirit: { id: 'spirit', name: 'Spirit Island', thumbnail: thumb('162886') },
+  crew: { id: 'crew', name: 'The Crew: Mission Deep Sea', thumbnail: thumb('324856') },
+  forbidden: { id: 'forbidden', name: 'Forbidden Island', thumbnail: thumb('65244') },
+  mem: { id: 'mem', name: 'Memphis', thumbnail: '' },
+  nash: { id: 'nash', name: 'Nashville', thumbnail: '' },
+  chat: { id: 'chat', name: 'Chattanooga', thumbnail: '' },
+  knox: { id: 'knox', name: 'Knoxville', thumbnail: '' },
+} as const;
+
+// ─── Scenario definitions ────────────────────────────────────────────────────
+
+// Methods Disagree: same ballot, divergent winners. MJ picks Catan (polarizer
+// with median=E). STAR/Borda/IRV/Condorcet pick Pandemic (the consistent
+// crowd-pleaser — Pandemic ties at top with two ambivalent voters and wins
+// the runoff). Dictator (Sam) picks Catan.
+const diverge: ScenarioDef = {
   id: 'mock-diverge',
   label: 'Methods Disagree',
-  description: 'Same ballot, different winners — proof that the method you choose can pick the game you play.',
-  tally: {
-    ballotId: 0,
-    ballotName: 'Game Night — Methods Compared',
-    officialMethod: 'ivstar',
-    voteCount: 7,
-    mj: [
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 7,
-        gradeCounts: gc(0, 7, 0, 0, 0, 0),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 3,
-        totalVotes: 7,
-        gradeCounts: gc(1, 4, 2, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 4,
-        totalVotes: 7,
-        gradeCounts: gc(0, 4, 3, 0, 0, 0),
-      },
-      {
-        id: 'ttr',
-        name: 'Ticket to Ride',
-        thumbnail: thumb('9209'),
-        rank: 5,
-        totalVotes: 7,
-        gradeCounts: gc(0, 0, 4, 3, 0, 0),
-      },
-    ],
-    star: [
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 1,
-        totalVotes: 7,
-        starScore: 28,
-        inRunoff: true,
-        gradeCounts: gc(0, 7, 0, 0, 0, 0),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 2,
-        totalVotes: 7,
-        starScore: 27,
-        inRunoff: true,
-        gradeCounts: gc(1, 4, 2, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 7,
-        starScore: 25,
-        gradeCounts: gc(0, 4, 3, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 4,
-        totalVotes: 7,
-        starScore: 20,
-        gradeCounts: gc(4, 0, 0, 0, 0, 3),
-      },
-      {
-        id: 'ttr',
-        name: 'Ticket to Ride',
-        thumbnail: thumb('9209'),
-        rank: 5,
-        totalVotes: 7,
-        starScore: 18,
-        gradeCounts: gc(0, 0, 4, 3, 0, 0),
-      },
-    ],
-    ivmj: [
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 1,
-        totalVotes: 7,
-        gradeCounts: gc(0, 7, 0, 0, 0, 0),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 2,
-        totalVotes: 7,
-        gradeCounts: gc(1, 4, 2, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 7,
-        gradeCounts: gc(0, 4, 3, 0, 0, 0),
-      },
-      {
-        id: 'ttr',
-        name: 'Ticket to Ride',
-        thumbnail: thumb('9209'),
-        rank: 4,
-        totalVotes: 7,
-        gradeCounts: gc(0, 0, 4, 3, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 5,
-        totalVotes: 7,
-        vetoed: true,
-        hardPassCount: 3,
-        gradeCounts: gc(4, 0, 0, 0, 0, 3),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 1,
-        totalVotes: 7,
-        starScore: 28,
-        inRunoff: true,
-        gradeCounts: gc(0, 7, 0, 0, 0, 0),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 2,
-        totalVotes: 7,
-        starScore: 27,
-        inRunoff: true,
-        gradeCounts: gc(1, 4, 2, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 7,
-        starScore: 25,
-        gradeCounts: gc(0, 4, 3, 0, 0, 0),
-      },
-      {
-        id: 'ttr',
-        name: 'Ticket to Ride',
-        thumbnail: thumb('9209'),
-        rank: 4,
-        totalVotes: 7,
-        starScore: 18,
-        gradeCounts: gc(0, 0, 4, 3, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 5,
-        totalVotes: 7,
-        starScore: 20,
-        vetoed: true,
-        hardPassCount: 3,
-        gradeCounts: gc(4, 0, 0, 0, 0, 3),
-      },
-    ],
-    // Borda: Pandemic wins (consistently high-ranked by all 7 voters)
-    borda: [
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 1,
-        totalVotes: 7,
-        bordaScore: 21,
-        gradeCounts: gc(0, 7, 0, 0, 0, 0),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 2,
-        totalVotes: 7,
-        bordaScore: 20,
-        gradeCounts: gc(1, 4, 2, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 7,
-        bordaScore: 18,
-        gradeCounts: gc(0, 4, 3, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 4,
-        totalVotes: 7,
-        bordaScore: 16,
-        gradeCounts: gc(4, 0, 0, 0, 0, 3),
-      },
-      {
-        id: 'ttr',
-        name: 'Ticket to Ride',
-        thumbnail: thumb('9209'),
-        rank: 5,
-        totalVotes: 7,
-        bordaScore: 11,
-        gradeCounts: gc(0, 0, 4, 3, 0, 0),
-      },
-    ],
-    // IRV: TTR → Codenames → Harmonies → Catan → Pandemic wins
-    irv: [
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 1,
-        totalVotes: 7,
-        gradeCounts: gc(0, 7, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 7,
-        irvElimRound: 4,
-        gradeCounts: gc(4, 0, 0, 0, 0, 3),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 3,
-        totalVotes: 7,
-        irvElimRound: 3,
-        gradeCounts: gc(1, 4, 2, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 4,
-        totalVotes: 7,
-        irvElimRound: 2,
-        gradeCounts: gc(0, 4, 3, 0, 0, 0),
-      },
-      {
-        id: 'ttr',
-        name: 'Ticket to Ride',
-        thumbnail: thumb('9209'),
-        rank: 5,
-        totalVotes: 7,
-        irvElimRound: 1,
-        gradeCounts: gc(0, 0, 4, 3, 0, 0),
-      },
-    ],
-    // Condorcet: Pandemic beats all head-to-head (consistent VG beats polarizing or mediocre)
-    condorcet: [
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 1,
-        totalVotes: 7,
-        pairwiseWins: 4,
-        gradeCounts: gc(0, 7, 0, 0, 0, 0),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 2,
-        totalVotes: 7,
-        pairwiseWins: 3,
-        gradeCounts: gc(1, 4, 2, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 7,
-        pairwiseWins: 2,
-        gradeCounts: gc(0, 4, 3, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 4,
-        totalVotes: 7,
-        pairwiseWins: 1,
-        gradeCounts: gc(4, 0, 0, 0, 0, 3),
-      },
-      {
-        id: 'ttr',
-        name: 'Ticket to Ride',
-        thumbnail: thumb('9209'),
-        rank: 5,
-        totalVotes: 7,
-        pairwiseWins: 0,
-        gradeCounts: gc(0, 0, 4, 3, 0, 0),
-      },
-    ],
-    condorcetParadox: false,
-    // Dictator: Sam voted last and loves Catan despite the haters
-    dictator: d([
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 7,
-        gradeCounts: gc(0, 7, 0, 0, 0, 0),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 2,
-        totalVotes: 7,
-        gradeCounts: gc(1, 4, 2, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 4,
-        totalVotes: 7,
-        gradeCounts: gc(0, 4, 3, 0, 0, 0),
-      },
-      {
-        id: 'ttr',
-        name: 'Ticket to Ride',
-        thumbnail: thumb('9209'),
-        rank: 4,
-        totalVotes: 7,
-        gradeCounts: gc(0, 0, 4, 3, 0, 0),
-      },
-    ]),
-    dictatorName: 'Sam',
-  },
+  description:
+    'Same ballot, different winners — proof that the method you choose can pick the game you play. STAR/Borda/IRV/Condorcet pick the consistent Pandemic; Dictator picks the polarizer Catan.',
+  ballotName: 'Game Night — Methods Compared',
+  officialMethod: 'ivstar',
+  candidates: [C.catan, C.pandemic, C.harmonies, C.codenames, C.ttr],
+  ballots: [
+    ballot('Catan-strict-1', {
+      catan: 'excellent',
+      pandemic: 'verygood',
+      harmonies: 'verygood',
+      codenames: 'good',
+      ttr: 'fair',
+    }),
+    ...block(2, 'Catan-Pandemic-equal', {
+      catan: 'excellent',
+      pandemic: 'excellent',
+      harmonies: 'verygood',
+      codenames: 'good',
+      ttr: 'fair',
+    }),
+    ...block(3, 'Pandemic-fan', {
+      pandemic: 'excellent',
+      harmonies: 'verygood',
+      codenames: 'good',
+      ttr: 'average',
+      catan: 'poor',
+    }),
+    ballot('Sam', { catan: 'excellent', pandemic: 'verygood', harmonies: 'verygood', codenames: 'good', ttr: 'fair' }),
+  ],
 };
 
-// ─── Scenario 2: Methods Agree ────────────────────────────────────────────────
-const agree: MockScenario = {
+// Methods Agree: everyone loves Harmonies — all eight methods agree.
+const agree: ScenarioDef = {
   id: 'mock-agree',
   label: 'Methods Agree',
   description: 'The baseline case: when voters agree, all eight methods agree. Everyone loves Harmonies.',
-  tally: {
-    ballotId: 0,
-    ballotName: 'Easy Night In',
-    officialMethod: 'ivstar',
-    voteCount: 5,
-    mj: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        gradeCounts: gc(4, 1, 0, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 2,
-        totalVotes: 5,
-        gradeCounts: gc(1, 2, 2, 0, 0, 0),
-      },
-      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 1, 2, 1, 1, 0) },
-    ],
-    star: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        starScore: 24,
-        inRunoff: true,
-        gradeCounts: gc(4, 1, 0, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 2,
-        totalVotes: 5,
-        starScore: 17,
-        inRunoff: true,
-        gradeCounts: gc(1, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 5,
-        starScore: 13,
-        gradeCounts: gc(0, 1, 2, 1, 1, 0),
-      },
-    ],
-    ivmj: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        gradeCounts: gc(4, 1, 0, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 2,
-        totalVotes: 5,
-        gradeCounts: gc(1, 2, 2, 0, 0, 0),
-      },
-      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 1, 2, 1, 1, 0) },
-    ],
-    ivstar: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        starScore: 24,
-        inRunoff: true,
-        gradeCounts: gc(4, 1, 0, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 2,
-        totalVotes: 5,
-        starScore: 17,
-        inRunoff: true,
-        gradeCounts: gc(1, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 5,
-        starScore: 13,
-        gradeCounts: gc(0, 1, 2, 1, 1, 0),
-      },
-    ],
-    borda: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        bordaScore: 9,
-        gradeCounts: gc(4, 1, 0, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 2,
-        totalVotes: 5,
-        bordaScore: 6,
-        gradeCounts: gc(1, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 5,
-        bordaScore: 3,
-        gradeCounts: gc(0, 1, 2, 1, 1, 0),
-      },
-    ],
-    irv: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        gradeCounts: gc(4, 1, 0, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 2,
-        totalVotes: 5,
-        irvElimRound: 2,
-        gradeCounts: gc(1, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 5,
-        irvElimRound: 1,
-        gradeCounts: gc(0, 1, 2, 1, 1, 0),
-      },
-    ],
-    condorcet: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        pairwiseWins: 2,
-        gradeCounts: gc(4, 1, 0, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 2,
-        totalVotes: 5,
-        pairwiseWins: 1,
-        gradeCounts: gc(1, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 5,
-        pairwiseWins: 0,
-        gradeCounts: gc(0, 1, 2, 1, 1, 0),
-      },
-    ],
-    condorcetParadox: false,
-    dictator: d([
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        gradeCounts: gc(4, 1, 0, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 2,
-        totalVotes: 5,
-        gradeCounts: gc(1, 2, 2, 0, 0, 0),
-      },
-      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 1, 2, 1, 1, 0) },
-    ]),
-    dictatorName: 'Pat',
-  },
+  ballotName: 'Easy Night In',
+  officialMethod: 'ivstar',
+  candidates: [C.harmonies, C.codenames, C.ra],
+  ballots: [
+    ...block(3, 'Fan', { harmonies: 'excellent', codenames: 'verygood', ra: 'good' }),
+    ballot('Casual', { harmonies: 'excellent', codenames: 'good', ra: 'average' }),
+    ballot('Pat', { harmonies: 'verygood', codenames: 'excellent', ra: 'verygood' }),
+  ],
 };
 
-// ─── Scenario: Borda's Broad-Support Winner ──────────────────────────────────
-// Two rival factions (euro-gamers love Catan, epic-gamers love Barrage)
-// polarize around their favorite and give the rival a hard pass. Codenames is
-// everyone's calm second choice. STAR (score=19), MJ (median=verygood), and IRV
-// all pick the polarizer Catan. But Borda — which rewards per-ballot *position*
-// rather than raw grades — uniquely lifts Codenames to #1 on its rank-sum.
-// Condorcet agrees (Codenames beats both factions head-to-head) and IV methods
-// veto both polarizers outright. Sam votes last, tipping IRV.
-const bordaConsensus: MockScenario = {
+// Borda's Broad-Support Winner: euro-vs-epic polarization, Codenames is the
+// calm second choice that Borda + Condorcet lift to #1. STAR/MJ/IRV still pick
+// the polarizing favorite. Sam votes last, dictator picks Codenames.
+const bordaConsensus: ScenarioDef = {
   id: 'mock-borda-consensus',
   label: 'Broad Support Wins',
   description:
     'STAR/MJ/IRV pick the polarizing favorite. Borda and Condorcet lift the consensus runner-up — the game nobody hates.',
-  tally: {
-    ballotId: 0,
-    ballotName: 'Euros vs Epics',
-    officialMethod: 'borda',
-    voteCount: 7,
-    mj: [
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(3, 1, 0, 0, 0, 3) },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 2,
-        totalVotes: 7,
-        gradeCounts: gc(1, 0, 0, 0, 6, 0),
-      },
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 3,
-        totalVotes: 7,
-        gradeCounts: gc(3, 0, 0, 0, 0, 4),
-      },
-    ],
-    star: [
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 1,
-        totalVotes: 7,
-        starScore: 19,
-        inRunoff: true,
-        gradeCounts: gc(3, 1, 0, 0, 0, 3),
-      },
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 2,
-        totalVotes: 7,
-        starScore: 15,
-        inRunoff: true,
-        gradeCounts: gc(3, 0, 0, 0, 0, 4),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 7,
-        starScore: 11,
-        gradeCounts: gc(1, 0, 0, 0, 6, 0),
-      },
-    ],
-    ivmj: [
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 7,
-        gradeCounts: gc(1, 0, 0, 0, 6, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 7,
-        vetoed: true,
-        hardPassCount: 3,
-        gradeCounts: gc(3, 1, 0, 0, 0, 3),
-      },
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 3,
-        totalVotes: 7,
-        vetoed: true,
-        hardPassCount: 4,
-        gradeCounts: gc(3, 0, 0, 0, 0, 4),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 7,
-        starScore: 11,
-        inRunoff: true,
-        gradeCounts: gc(1, 0, 0, 0, 6, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 7,
-        starScore: 19,
-        vetoed: true,
-        hardPassCount: 3,
-        gradeCounts: gc(3, 1, 0, 0, 0, 3),
-      },
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 3,
-        totalVotes: 7,
-        starScore: 15,
-        vetoed: true,
-        hardPassCount: 4,
-        gradeCounts: gc(3, 0, 0, 0, 0, 4),
-      },
-    ],
-    borda: [
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 7,
-        bordaScore: 8,
-        gradeCounts: gc(1, 0, 0, 0, 6, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 7,
-        bordaScore: 7,
-        gradeCounts: gc(3, 1, 0, 0, 0, 3),
-      },
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 3,
-        totalVotes: 7,
-        bordaScore: 6,
-        gradeCounts: gc(3, 0, 0, 0, 0, 4),
-      },
-    ],
-    irv: [
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(3, 1, 0, 0, 0, 3) },
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 2,
-        totalVotes: 7,
-        irvElimRound: 2,
-        gradeCounts: gc(3, 0, 0, 0, 0, 4),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 7,
-        irvElimRound: 1,
-        gradeCounts: gc(1, 0, 0, 0, 6, 0),
-      },
-    ],
-    condorcet: [
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 7,
-        pairwiseWins: 2,
-        gradeCounts: gc(1, 0, 0, 0, 6, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 7,
-        pairwiseWins: 1,
-        gradeCounts: gc(3, 1, 0, 0, 0, 3),
-      },
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 3,
-        totalVotes: 7,
-        pairwiseWins: 0,
-        gradeCounts: gc(3, 0, 0, 0, 0, 4),
-      },
-    ],
-    condorcetParadox: false,
-    dictator: d([
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 7,
-        gradeCounts: gc(1, 0, 0, 0, 6, 0),
-      },
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 2, totalVotes: 7, gradeCounts: gc(3, 1, 0, 0, 0, 3) },
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 3,
-        totalVotes: 7,
-        gradeCounts: gc(3, 0, 0, 0, 0, 4),
-      },
-    ]),
-    dictatorName: 'Sam',
-  },
+  ballotName: 'Euros vs Epics',
+  officialMethod: 'borda',
+  candidates: [C.catan, C.codenames, C.barrage],
+  ballots: [
+    ...block(3, 'Euro-fan', { catan: 'excellent', codenames: 'fair', barrage: 'poor' }),
+    ...block(3, 'Epic-fan', { barrage: 'excellent', codenames: 'fair', catan: 'poor' }),
+    ballot('Sam', { codenames: 'excellent', catan: 'verygood', barrage: 'poor' }),
+  ],
 };
 
-// ─── Scenario 3: No Votes ─────────────────────────────────────────────────────
-const noVotes: MockScenario = {
+// No Votes Yet: degenerate case, all rankings empty.
+const noVotes: ScenarioDef = {
   id: 'mock-novotes',
   label: 'No Votes Yet',
   description: 'The ballot is open but nobody has voted yet.',
-  tally: {
-    ballotId: 0,
-    ballotName: 'Friday Night Games',
-    officialMethod: 'ivstar',
-    voteCount: 0,
-    mj: [],
-    star: [],
-    ivmj: [],
-    ivstar: [],
-    borda: [],
-    irv: [],
-    condorcet: [],
-    condorcetParadox: false,
-    dictator: d([]),
-    dictatorName: null,
-  },
+  ballotName: 'Friday Night Games',
+  officialMethod: 'ivstar',
+  candidates: [C.harmonies, C.catan, C.codenames],
+  ballots: [],
 };
 
-// ─── Scenario 4: Perfect Tie ──────────────────────────────────────────────────
-// Catan and Pandemic have identical grade distributions — every method ties.
-const tie: MockScenario = {
+// Perfect Tie: Catan and Pandemic share identical aggregate grades. Most voters
+// rate them equally; one voter prefers Pandemic, Jordan (the dictator) prefers
+// Catan, and the two asymmetries cancel out so the aggregate tallies stay tied.
+// Every method deadlocks at #1 except Dictator.
+const tie: ScenarioDef = {
   id: 'mock-tie',
   label: 'Perfect Tie',
   description: 'Two games have identical ratings — every method deadlocks at #1 except Dictator.',
-  tally: {
-    ballotId: 0,
-    ballotName: 'Impossible to Choose',
-    officialMethod: 'ivstar',
-    voteCount: 7,
-    mj: [
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 1,
-        totalVotes: 7,
-        gradeCounts: gc(3, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 3,
-        totalVotes: 7,
-        gradeCounts: gc(0, 1, 3, 3, 0, 0),
-      },
-    ],
-    star: [
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 1,
-        totalVotes: 7,
-        starScore: 29,
-        inRunoff: true,
-        gradeCounts: gc(3, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 1,
-        totalVotes: 7,
-        starScore: 29,
-        inRunoff: true,
-        gradeCounts: gc(3, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 3,
-        totalVotes: 7,
-        starScore: 15,
-        gradeCounts: gc(0, 1, 3, 3, 0, 0),
-      },
-    ],
-    ivmj: [
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 1,
-        totalVotes: 7,
-        gradeCounts: gc(3, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 3,
-        totalVotes: 7,
-        gradeCounts: gc(0, 1, 3, 3, 0, 0),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 1,
-        totalVotes: 7,
-        starScore: 29,
-        inRunoff: true,
-        gradeCounts: gc(3, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 1,
-        totalVotes: 7,
-        starScore: 29,
-        inRunoff: true,
-        gradeCounts: gc(3, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 3,
-        totalVotes: 7,
-        starScore: 15,
-        gradeCounts: gc(0, 1, 3, 3, 0, 0),
-      },
-    ],
-    borda: [
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 1,
-        totalVotes: 7,
-        bordaScore: 11,
-        gradeCounts: gc(3, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 1,
-        totalVotes: 7,
-        bordaScore: 11,
-        gradeCounts: gc(3, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 3,
-        totalVotes: 7,
-        bordaScore: 6,
-        gradeCounts: gc(0, 1, 3, 3, 0, 0),
-      },
-    ],
-    irv: [
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 1,
-        totalVotes: 7,
-        gradeCounts: gc(3, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 3,
-        totalVotes: 7,
-        irvElimRound: 1,
-        gradeCounts: gc(0, 1, 3, 3, 0, 0),
-      },
-    ],
-    condorcet: [
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 1,
-        totalVotes: 7,
-        pairwiseWins: 1,
-        gradeCounts: gc(3, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 1,
-        totalVotes: 7,
-        pairwiseWins: 1,
-        gradeCounts: gc(3, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 3,
-        totalVotes: 7,
-        pairwiseWins: 0,
-        gradeCounts: gc(0, 1, 3, 3, 0, 0),
-      },
-    ],
-    condorcetParadox: false,
-    dictator: d([
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(3, 2, 2, 0, 0, 0) },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 7,
-        gradeCounts: gc(3, 2, 2, 0, 0, 0),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 3,
-        totalVotes: 7,
-        gradeCounts: gc(0, 1, 3, 3, 0, 0),
-      },
-    ]),
-    dictatorName: 'Jordan',
-  },
+  ballotName: 'Impossible to Choose',
+  officialMethod: 'ivstar',
+  candidates: [C.catan, C.pandemic, C.harmonies],
+  ballots: [
+    ...block(2, 'High', { catan: 'excellent', pandemic: 'excellent', harmonies: 'average' }),
+    ...block(2, 'Mid', { catan: 'verygood', pandemic: 'verygood', harmonies: 'average' }),
+    ballot('Casual', { catan: 'good', pandemic: 'good', harmonies: 'verygood' }),
+    ballot('Counter', { catan: 'good', pandemic: 'excellent', harmonies: 'good' }),
+    ballot('Jordan', { catan: 'excellent', pandemic: 'good', harmonies: 'good' }),
+  ],
 };
 
-// ─── Scenario 5: STAR Runoff Flip ─────────────────────────────────────────────
-// Cosmic scores highest (25) but Terra wins the runoff 5-2 head-to-head.
-// IRV + Condorcet also pick Terra (Terra is everyone's #1 or #2 except 2 HP voters).
-// IV vetoes Terra (2 HP > 0). Dictator "Jordan" is a Cosmic fan.
-const runoffFlip: MockScenario = {
+// STAR Runoff Flip: Cosmic scores highest but Terra wins the head-to-head
+// runoff 5-2. IRV + Condorcet also pick Terra. IV vetoes Terra (2 HP). Dictator
+// Jordan is a Cosmic-fan.
+const runoffFlip: ScenarioDef = {
   id: 'mock-runoff-flip',
   label: 'STAR Runoff Flip',
   description: 'The highest-scoring game loses the runoff — majority preferred the runner-up head-to-head.',
-  tally: {
-    ballotId: 0,
-    ballotName: 'STAR Runoff Demo',
-    officialMethod: 'star',
-    voteCount: 7,
-    mj: [
-      {
-        id: 'terra',
-        name: 'Terra Mystica',
-        thumbnail: thumb('120677'),
-        rank: 1,
-        totalVotes: 7,
-        gradeCounts: gc(0, 5, 0, 0, 0, 2),
-      },
-      {
-        id: 'cosmic',
-        name: 'Cosmic Encounter',
-        thumbnail: thumb('39463'),
-        rank: 2,
-        totalVotes: 7,
-        gradeCounts: gc(2, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'powergrid',
-        name: 'Power Grid',
-        thumbnail: thumb('2651'),
-        rank: 3,
-        totalVotes: 7,
-        gradeCounts: gc(0, 0, 3, 4, 0, 0),
-      },
-    ],
-    star: [
-      {
-        id: 'terra',
-        name: 'Terra Mystica',
-        thumbnail: thumb('120677'),
-        rank: 1,
-        totalVotes: 7,
-        starScore: 20,
-        inRunoff: true,
-        gradeCounts: gc(0, 5, 0, 0, 0, 2),
-      },
-      {
-        id: 'cosmic',
-        name: 'Cosmic Encounter',
-        thumbnail: thumb('39463'),
-        rank: 2,
-        totalVotes: 7,
-        starScore: 25,
-        inRunoff: true,
-        gradeCounts: gc(2, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'powergrid',
-        name: 'Power Grid',
-        thumbnail: thumb('2651'),
-        rank: 3,
-        totalVotes: 7,
-        starScore: 17,
-        gradeCounts: gc(0, 0, 3, 4, 0, 0),
-      },
-    ],
-    ivmj: [
-      {
-        id: 'cosmic',
-        name: 'Cosmic Encounter',
-        thumbnail: thumb('39463'),
-        rank: 1,
-        totalVotes: 7,
-        gradeCounts: gc(2, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'powergrid',
-        name: 'Power Grid',
-        thumbnail: thumb('2651'),
-        rank: 2,
-        totalVotes: 7,
-        gradeCounts: gc(0, 0, 3, 4, 0, 0),
-      },
-      {
-        id: 'terra',
-        name: 'Terra Mystica',
-        thumbnail: thumb('120677'),
-        rank: 3,
-        totalVotes: 7,
-        vetoed: true,
-        hardPassCount: 2,
-        gradeCounts: gc(0, 5, 0, 0, 0, 2),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'cosmic',
-        name: 'Cosmic Encounter',
-        thumbnail: thumb('39463'),
-        rank: 1,
-        totalVotes: 7,
-        starScore: 25,
-        inRunoff: true,
-        gradeCounts: gc(2, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'powergrid',
-        name: 'Power Grid',
-        thumbnail: thumb('2651'),
-        rank: 2,
-        totalVotes: 7,
-        starScore: 17,
-        inRunoff: true,
-        gradeCounts: gc(0, 0, 3, 4, 0, 0),
-      },
-      {
-        id: 'terra',
-        name: 'Terra Mystica',
-        thumbnail: thumb('120677'),
-        rank: 3,
-        totalVotes: 7,
-        starScore: 20,
-        vetoed: true,
-        hardPassCount: 2,
-        gradeCounts: gc(0, 5, 0, 0, 0, 2),
-      },
-    ],
-    // Borda: Terra wins (5 VG voters rank it highly; Cosmic's HP voters drag it down)
-    borda: [
-      {
-        id: 'terra',
-        name: 'Terra Mystica',
-        thumbnail: thumb('120677'),
-        rank: 1,
-        totalVotes: 7,
-        bordaScore: 10,
-        gradeCounts: gc(0, 5, 0, 0, 0, 2),
-      },
-      {
-        id: 'cosmic',
-        name: 'Cosmic Encounter',
-        thumbnail: thumb('39463'),
-        rank: 2,
-        totalVotes: 7,
-        bordaScore: 9,
-        gradeCounts: gc(2, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'powergrid',
-        name: 'Power Grid',
-        thumbnail: thumb('2651'),
-        rank: 3,
-        totalVotes: 7,
-        bordaScore: 5,
-        gradeCounts: gc(0, 0, 3, 4, 0, 0),
-      },
-    ],
-    // IRV: Power Grid elim round 1, then Terra beats Cosmic (Terra has 5 first-choice VG voters)
-    irv: [
-      {
-        id: 'terra',
-        name: 'Terra Mystica',
-        thumbnail: thumb('120677'),
-        rank: 1,
-        totalVotes: 7,
-        gradeCounts: gc(0, 5, 0, 0, 0, 2),
-      },
-      {
-        id: 'cosmic',
-        name: 'Cosmic Encounter',
-        thumbnail: thumb('39463'),
-        rank: 2,
-        totalVotes: 7,
-        irvElimRound: 2,
-        gradeCounts: gc(2, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'powergrid',
-        name: 'Power Grid',
-        thumbnail: thumb('2651'),
-        rank: 3,
-        totalVotes: 7,
-        irvElimRound: 1,
-        gradeCounts: gc(0, 0, 3, 4, 0, 0),
-      },
-    ],
-    // Condorcet: Terra beats all head-to-head (5 VG voters prefer Terra over everyone)
-    condorcet: [
-      {
-        id: 'terra',
-        name: 'Terra Mystica',
-        thumbnail: thumb('120677'),
-        rank: 1,
-        totalVotes: 7,
-        pairwiseWins: 2,
-        gradeCounts: gc(0, 5, 0, 0, 0, 2),
-      },
-      {
-        id: 'cosmic',
-        name: 'Cosmic Encounter',
-        thumbnail: thumb('39463'),
-        rank: 2,
-        totalVotes: 7,
-        pairwiseWins: 1,
-        gradeCounts: gc(2, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'powergrid',
-        name: 'Power Grid',
-        thumbnail: thumb('2651'),
-        rank: 3,
-        totalVotes: 7,
-        pairwiseWins: 0,
-        gradeCounts: gc(0, 0, 3, 4, 0, 0),
-      },
-    ],
-    condorcetParadox: false,
-    // Dictator: Jordan voted last and is a Cosmic Encounter devotee
-    dictator: d([
-      {
-        id: 'cosmic',
-        name: 'Cosmic Encounter',
-        thumbnail: thumb('39463'),
-        rank: 1,
-        totalVotes: 7,
-        gradeCounts: gc(2, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'terra',
-        name: 'Terra Mystica',
-        thumbnail: thumb('120677'),
-        rank: 2,
-        totalVotes: 7,
-        gradeCounts: gc(0, 5, 0, 0, 0, 2),
-      },
-      {
-        id: 'powergrid',
-        name: 'Power Grid',
-        thumbnail: thumb('2651'),
-        rank: 3,
-        totalVotes: 7,
-        gradeCounts: gc(0, 0, 3, 4, 0, 0),
-      },
-    ]),
-    dictatorName: 'Jordan',
-  },
+  ballotName: 'STAR Runoff Demo',
+  officialMethod: 'star',
+  candidates: [C.cosmic, C.terra, C.powergrid],
+  ballots: [
+    ...block(5, 'Eurogamer', { terra: 'verygood', cosmic: 'good', powergrid: 'good' }),
+    ballot('HP-1', { cosmic: 'excellent', terra: 'poor', powergrid: 'average' }),
+    ballot('Jordan', { cosmic: 'excellent', terra: 'poor', powergrid: 'average' }),
+  ],
 };
 
-// ─── Scenario 6: Single Vote ──────────────────────────────────────────────────
-const oneVote: MockScenario = {
+// Single Vote: only one voter (Riley); every method just reflects their ratings.
+const oneVote: ScenarioDef = {
   id: 'mock-onevote',
   label: 'Single Vote',
   description: "Only one voter so far — rankings are just that person's ratings.",
-  tally: {
-    ballotId: 0,
-    ballotName: 'Just Me So Far',
-    officialMethod: 'ivstar',
-    voteCount: 1,
-    mj: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 1,
-        gradeCounts: gc(1, 0, 0, 0, 0, 0),
-      },
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 2, totalVotes: 1, gradeCounts: gc(0, 0, 1, 0, 0, 0) },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 1,
-        gradeCounts: gc(0, 0, 0, 0, 1, 0),
-      },
-    ],
-    star: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 1,
-        starScore: 5,
-        inRunoff: true,
-        gradeCounts: gc(1, 0, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 1,
-        starScore: 3,
-        inRunoff: true,
-        gradeCounts: gc(0, 0, 1, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 1,
-        starScore: 1,
-        gradeCounts: gc(0, 0, 0, 0, 1, 0),
-      },
-    ],
-    ivmj: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 1,
-        gradeCounts: gc(1, 0, 0, 0, 0, 0),
-      },
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 2, totalVotes: 1, gradeCounts: gc(0, 0, 1, 0, 0, 0) },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 1,
-        gradeCounts: gc(0, 0, 0, 0, 1, 0),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 1,
-        starScore: 5,
-        inRunoff: true,
-        gradeCounts: gc(1, 0, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 1,
-        starScore: 3,
-        inRunoff: true,
-        gradeCounts: gc(0, 0, 1, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 1,
-        starScore: 1,
-        gradeCounts: gc(0, 0, 0, 0, 1, 0),
-      },
-    ],
-    borda: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 1,
-        bordaScore: 2,
-        gradeCounts: gc(1, 0, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 1,
-        bordaScore: 1,
-        gradeCounts: gc(0, 0, 1, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 1,
-        bordaScore: 0,
-        gradeCounts: gc(0, 0, 0, 0, 1, 0),
-      },
-    ],
-    irv: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 1,
-        gradeCounts: gc(1, 0, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 1,
-        irvElimRound: 2,
-        gradeCounts: gc(0, 0, 1, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 1,
-        irvElimRound: 1,
-        gradeCounts: gc(0, 0, 0, 0, 1, 0),
-      },
-    ],
-    condorcet: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 1,
-        pairwiseWins: 2,
-        gradeCounts: gc(1, 0, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 1,
-        pairwiseWins: 1,
-        gradeCounts: gc(0, 0, 1, 0, 0, 0),
-      },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 1,
-        pairwiseWins: 0,
-        gradeCounts: gc(0, 0, 0, 0, 1, 0),
-      },
-    ],
-    condorcetParadox: false,
-    // The only voter is the dictator by default
-    dictator: d([
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 1,
-        gradeCounts: gc(1, 0, 0, 0, 0, 0),
-      },
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 2, totalVotes: 1, gradeCounts: gc(0, 0, 1, 0, 0, 0) },
-      {
-        id: 'codenames',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 1,
-        gradeCounts: gc(0, 0, 0, 0, 1, 0),
-      },
-    ]),
-    dictatorName: 'Riley',
-  },
+  ballotName: 'Just Me So Far',
+  officialMethod: 'ivstar',
+  candidates: [C.harmonies, C.catan, C.codenames],
+  ballots: [ballot('Riley', { harmonies: 'excellent', catan: 'good', codenames: 'fair' })],
 };
 
-// ─── Scenario 7: Veto — No Effect (Equal HP Counts) ──────────────────────────
-const vetoNodiff: MockScenario = {
+// Veto — No Effect: every game has the same minimum Hard Pass count, so the
+// IV methods fall through. Sam votes last, dictator picks Catan.
+const vetoNodiff: ScenarioDef = {
   id: 'mock-veto-nodiff',
   label: 'Veto — No Effect',
   description:
     "Veto isn't a trump card — when every game has the same Hard Pass count, the IV methods fall through and the raw winners stand.",
-  tally: {
-    ballotId: 0,
-    ballotName: 'Equal Hard Passes',
-    officialMethod: 'ivmj',
-    voteCount: 5,
-    mj: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        gradeCounts: gc(3, 1, 0, 0, 0, 1),
-      },
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 2, totalVotes: 5, gradeCounts: gc(0, 3, 1, 0, 0, 1) },
-      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 0, 2, 2, 0, 1) },
-    ],
-    star: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        starScore: 19,
-        inRunoff: true,
-        gradeCounts: gc(3, 1, 0, 0, 0, 1),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 5,
-        starScore: 15,
-        inRunoff: true,
-        gradeCounts: gc(0, 3, 1, 0, 0, 1),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 5,
-        starScore: 10,
-        gradeCounts: gc(0, 0, 2, 2, 0, 1),
-      },
-    ],
-    ivmj: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        gradeCounts: gc(3, 1, 0, 0, 0, 1),
-      },
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 2, totalVotes: 5, gradeCounts: gc(0, 3, 1, 0, 0, 1) },
-      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 0, 2, 2, 0, 1) },
-    ],
-    ivstar: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        starScore: 19,
-        inRunoff: true,
-        gradeCounts: gc(3, 1, 0, 0, 0, 1),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 5,
-        starScore: 15,
-        inRunoff: true,
-        gradeCounts: gc(0, 3, 1, 0, 0, 1),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 5,
-        starScore: 10,
-        gradeCounts: gc(0, 0, 2, 2, 0, 1),
-      },
-    ],
-    borda: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        bordaScore: 8,
-        gradeCounts: gc(3, 1, 0, 0, 0, 1),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 5,
-        bordaScore: 6,
-        gradeCounts: gc(0, 3, 1, 0, 0, 1),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 5,
-        bordaScore: 3,
-        gradeCounts: gc(0, 0, 2, 2, 0, 1),
-      },
-    ],
-    irv: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        gradeCounts: gc(3, 1, 0, 0, 0, 1),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 5,
-        irvElimRound: 2,
-        gradeCounts: gc(0, 3, 1, 0, 0, 1),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 5,
-        irvElimRound: 1,
-        gradeCounts: gc(0, 0, 2, 2, 0, 1),
-      },
-    ],
-    condorcet: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        pairwiseWins: 2,
-        gradeCounts: gc(3, 1, 0, 0, 0, 1),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 5,
-        pairwiseWins: 1,
-        gradeCounts: gc(0, 3, 1, 0, 0, 1),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 5,
-        pairwiseWins: 0,
-        gradeCounts: gc(0, 0, 2, 2, 0, 1),
-      },
-    ],
-    condorcetParadox: false,
-    dictator: d([
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 5, gradeCounts: gc(0, 3, 1, 0, 0, 1) },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 2,
-        totalVotes: 5,
-        gradeCounts: gc(3, 1, 0, 0, 0, 1),
-      },
-      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 0, 2, 2, 0, 1) },
-    ]),
-    dictatorName: 'Sam',
-  },
+  ballotName: 'Equal Hard Passes',
+  officialMethod: 'ivmj',
+  candidates: [C.harmonies, C.catan, C.ra],
+  ballots: [
+    ballot('HP-Harm', { harmonies: 'poor', catan: 'verygood', ra: 'good' }),
+    ballot('HP-Catan', { harmonies: 'excellent', catan: 'poor', ra: 'good' }),
+    ballot('HP-Ra', { harmonies: 'excellent', catan: 'verygood', ra: 'poor' }),
+    ballot('Mid', { harmonies: 'excellent', catan: 'verygood', ra: 'average' }),
+    ballot('Sam', { harmonies: 'verygood', catan: 'verygood', ra: 'average' }),
+  ],
 };
 
-// ─── Scenario 8: Veto — One Survivor ─────────────────────────────────────────
-const vetoOneSurvivor: MockScenario = {
+// Veto — One Survivor: Catan & Pandemic both pile up Hard Passes; Harmonies
+// (no HPs) is the only survivor, winning both IV methods by default.
+const vetoOneSurvivor: ScenarioDef = {
   id: 'mock-veto-onesurvivor',
   label: 'Veto — One Survivor',
   description: 'Only one game escapes the veto — it wins both IV methods by default.',
-  tally: {
-    ballotId: 0,
-    ballotName: 'Mass Disqualification',
-    officialMethod: 'ivstar',
-    voteCount: 6,
-    mj: [
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 6, gradeCounts: gc(4, 0, 0, 0, 0, 2) },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 6,
-        gradeCounts: gc(3, 0, 0, 0, 0, 3),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 3,
-        totalVotes: 6,
-        gradeCounts: gc(2, 4, 0, 0, 0, 0),
-      },
-    ],
-    star: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 6,
-        starScore: 26,
-        inRunoff: true,
-        gradeCounts: gc(2, 4, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 6,
-        starScore: 20,
-        inRunoff: true,
-        gradeCounts: gc(4, 0, 0, 0, 0, 2),
-      },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 3,
-        totalVotes: 6,
-        starScore: 15,
-        gradeCounts: gc(3, 0, 0, 0, 0, 3),
-      },
-    ],
-    ivmj: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 6,
-        gradeCounts: gc(2, 4, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 6,
-        vetoed: true,
-        hardPassCount: 2,
-        gradeCounts: gc(4, 0, 0, 0, 0, 2),
-      },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 3,
-        totalVotes: 6,
-        vetoed: true,
-        hardPassCount: 3,
-        gradeCounts: gc(3, 0, 0, 0, 0, 3),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 6,
-        starScore: 26,
-        inRunoff: true,
-        gradeCounts: gc(2, 4, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 6,
-        starScore: 20,
-        vetoed: true,
-        hardPassCount: 2,
-        gradeCounts: gc(4, 0, 0, 0, 0, 2),
-      },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 3,
-        totalVotes: 6,
-        starScore: 15,
-        vetoed: true,
-        hardPassCount: 3,
-        gradeCounts: gc(3, 0, 0, 0, 0, 3),
-      },
-    ],
-    borda: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 6,
-        bordaScore: 10,
-        gradeCounts: gc(2, 4, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 6,
-        bordaScore: 8,
-        gradeCounts: gc(4, 0, 0, 0, 0, 2),
-      },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 3,
-        totalVotes: 6,
-        bordaScore: 6,
-        gradeCounts: gc(3, 0, 0, 0, 0, 3),
-      },
-    ],
-    irv: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 6,
-        gradeCounts: gc(2, 4, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 6,
-        irvElimRound: 2,
-        gradeCounts: gc(4, 0, 0, 0, 0, 2),
-      },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 3,
-        totalVotes: 6,
-        irvElimRound: 1,
-        gradeCounts: gc(3, 0, 0, 0, 0, 3),
-      },
-    ],
-    condorcet: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 6,
-        pairwiseWins: 2,
-        gradeCounts: gc(2, 4, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 6,
-        pairwiseWins: 1,
-        gradeCounts: gc(4, 0, 0, 0, 0, 2),
-      },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 3,
-        totalVotes: 6,
-        pairwiseWins: 0,
-        gradeCounts: gc(3, 0, 0, 0, 0, 3),
-      },
-    ],
-    condorcetParadox: false,
-    dictator: d([
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 6, gradeCounts: gc(4, 0, 0, 0, 0, 2) },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 2,
-        totalVotes: 6,
-        gradeCounts: gc(2, 4, 0, 0, 0, 0),
-      },
-      {
-        id: 'pandemic',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 3,
-        totalVotes: 6,
-        gradeCounts: gc(3, 0, 0, 0, 0, 3),
-      },
-    ]),
-    dictatorName: 'Alex',
-  },
+  ballotName: 'Mass Disqualification',
+  officialMethod: 'ivstar',
+  candidates: [C.catan, C.pandemic, C.harmonies],
+  ballots: [
+    ...block(2, 'Catan-fan', { catan: 'excellent', pandemic: 'poor', harmonies: 'verygood' }),
+    ...block(2, 'Pandemic-fan', { pandemic: 'excellent', catan: 'poor', harmonies: 'verygood' }),
+    ballot('Pandemic-fan 3', { pandemic: 'excellent', catan: 'excellent', harmonies: 'excellent' }),
+    ballot('Alex', { catan: 'excellent', pandemic: 'poor', harmonies: 'verygood' }),
+  ],
 };
 
-// ─── Scenario 9: Veto — Changes Winner ────────────────────────────────────────
-const vetoChangesWinner: MockScenario = {
+// Veto — Changes Winner: Catan has the highest score but one Hard Pass.
+// The veto knocks Catan out; Harmonies wins IV. Sam (Catan-fan) votes last.
+const vetoChangesWinner: ScenarioDef = {
   id: 'mock-veto-changes-winner',
   label: 'Veto — Changes Winner',
   description: 'The top-rated game has one Hard Pass — the veto knocks it out and the runner-up wins.',
-  tally: {
-    ballotId: 0,
-    ballotName: 'One Dissenting Vote',
-    officialMethod: 'ivstar',
-    voteCount: 5,
-    mj: [
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 5, gradeCounts: gc(4, 0, 0, 0, 0, 1) },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 2,
-        totalVotes: 5,
-        gradeCounts: gc(2, 3, 0, 0, 0, 0),
-      },
-      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 2, 3, 0, 0, 0) },
-    ],
-    star: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        starScore: 22,
-        inRunoff: true,
-        gradeCounts: gc(2, 3, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 5,
-        starScore: 20,
-        inRunoff: true,
-        gradeCounts: gc(4, 0, 0, 0, 0, 1),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 5,
-        starScore: 17,
-        gradeCounts: gc(0, 2, 3, 0, 0, 0),
-      },
-    ],
-    ivmj: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        gradeCounts: gc(2, 3, 0, 0, 0, 0),
-      },
-      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 2, totalVotes: 5, gradeCounts: gc(0, 2, 3, 0, 0, 0) },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 5,
-        vetoed: true,
-        hardPassCount: 1,
-        gradeCounts: gc(4, 0, 0, 0, 0, 1),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        starScore: 22,
-        inRunoff: true,
-        gradeCounts: gc(2, 3, 0, 0, 0, 0),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 2,
-        totalVotes: 5,
-        starScore: 17,
-        inRunoff: true,
-        gradeCounts: gc(0, 2, 3, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 5,
-        starScore: 20,
-        vetoed: true,
-        hardPassCount: 1,
-        gradeCounts: gc(4, 0, 0, 0, 0, 1),
-      },
-    ],
-    borda: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        bordaScore: 8,
-        gradeCounts: gc(2, 3, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 5,
-        bordaScore: 7,
-        gradeCounts: gc(4, 0, 0, 0, 0, 1),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 5,
-        bordaScore: 5,
-        gradeCounts: gc(0, 2, 3, 0, 0, 0),
-      },
-    ],
-    irv: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        gradeCounts: gc(2, 3, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 5,
-        irvElimRound: 2,
-        gradeCounts: gc(4, 0, 0, 0, 0, 1),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 5,
-        irvElimRound: 1,
-        gradeCounts: gc(0, 2, 3, 0, 0, 0),
-      },
-    ],
-    condorcet: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 5,
-        pairwiseWins: 2,
-        gradeCounts: gc(2, 3, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 5,
-        pairwiseWins: 1,
-        gradeCounts: gc(4, 0, 0, 0, 0, 1),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 5,
-        pairwiseWins: 0,
-        gradeCounts: gc(0, 2, 3, 0, 0, 0),
-      },
-    ],
-    condorcetParadox: false,
-    dictator: d([
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 5, gradeCounts: gc(4, 0, 0, 0, 0, 1) },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 2,
-        totalVotes: 5,
-        gradeCounts: gc(2, 3, 0, 0, 0, 0),
-      },
-      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 3, totalVotes: 5, gradeCounts: gc(0, 2, 3, 0, 0, 0) },
-    ]),
-    dictatorName: 'Sam',
-  },
+  ballotName: 'One Dissenting Vote',
+  officialMethod: 'ivstar',
+  candidates: [C.catan, C.harmonies, C.ra],
+  ballots: [
+    ...block(3, 'Catan-fan', { catan: 'excellent', harmonies: 'verygood', ra: 'good' }),
+    ballot('HP-Catan', { catan: 'poor', harmonies: 'verygood', ra: 'good' }),
+    ballot('Sam', { catan: 'excellent', harmonies: 'verygood', ra: 'good' }),
+  ],
 };
 
-// ─── Scenario: Maximum Disagreement ──────────────────────────────────────────
-// 7 voters, 5 games, engineered so that five of the eight methods pick five
-// different winners:
-//   MJ        → Ra     (polarizer with 4 excellents gives median=excellent)
-//   STAR      → Brass    (score leader, wins runoff on broad high ratings)
-//   Borda     → Brass    (consistent top-half ranking)
-//   IRV       → Brass    (survives eliminations after redistribution)
-//   Condorcet → Brass    (beats every other game head-to-head)
-//   IV·STAR   → Dominion (Brass & Ra vetoed for hard-passes; Dom beats Catan in runoff)
-//   IV·MJ     → Catan    (same veto, but Catan's median verygood > Dom's good)
-//   Dictator  → A Feast for Odin (Sam, the last voter, rates A Feast for Odin excellent)
-// Winner distinct count across the 8 methods: 5.
-// Ballots verified by running the real voting functions against synthesized
-// grades before committing.
-const maxDisagree: MockScenario = {
+// Maximum Disagreement: five different winners across the eight methods.
+// MJ→Ra (median=E polarizer); STAR/Borda/IRV/Condorcet→Brass; IV·STAR→Dominion;
+// IV·MJ→Catan; Dictator→Odin (Sam loves it, everyone else HPs).
+const maxDisagree: ScenarioDef = {
   id: 'mock-max-disagree',
   label: 'Maximum Disagreement',
   description: 'Five different winners across eight methods — polarizer, consensus, vetoes, and a dictator finale.',
-  tally: {
-    ballotId: 0,
-    ballotName: 'Five-Way Split',
-    officialMethod: 'ivstar',
-    voteCount: 7,
-    mj: [
-      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 1, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 7,
-        gradeCounts: gc(3, 3, 0, 0, 0, 1),
-      },
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 3, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
-      {
-        id: 'dom',
-        name: 'Dominion',
-        thumbnail: thumb('36218'),
-        rank: 4,
-        totalVotes: 7,
-        gradeCounts: gc(2, 1, 4, 0, 0, 0),
-      },
-      {
-        id: 'odin',
-        name: 'A Feast for Odin',
-        thumbnail: thumb('177736'),
-        rank: 5,
-        totalVotes: 7,
-        gradeCounts: gc(1, 0, 0, 0, 0, 6),
-      },
-    ],
-    star: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 7,
-        starScore: 27,
-        inRunoff: true,
-        gradeCounts: gc(3, 3, 0, 0, 0, 1),
-      },
-      {
-        id: 'dom',
-        name: 'Dominion',
-        thumbnail: thumb('36218'),
-        rank: 2,
-        totalVotes: 7,
-        starScore: 26,
-        inRunoff: true,
-        gradeCounts: gc(2, 1, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 7,
-        starScore: 25,
-        gradeCounts: gc(0, 4, 3, 0, 0, 0),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 4,
-        totalVotes: 7,
-        starScore: 20,
-        gradeCounts: gc(4, 0, 0, 0, 0, 3),
-      },
-      {
-        id: 'odin',
-        name: 'A Feast for Odin',
-        thumbnail: thumb('177736'),
-        rank: 5,
-        totalVotes: 7,
-        starScore: 5,
-        gradeCounts: gc(1, 0, 0, 0, 0, 6),
-      },
-    ],
-    ivmj: [
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
-      {
-        id: 'dom',
-        name: 'Dominion',
-        thumbnail: thumb('36218'),
-        rank: 2,
-        totalVotes: 7,
-        gradeCounts: gc(2, 1, 4, 0, 0, 0),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 7,
-        vetoed: true,
-        hardPassCount: 3,
-        gradeCounts: gc(4, 0, 0, 0, 0, 3),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 4,
-        totalVotes: 7,
-        vetoed: true,
-        hardPassCount: 1,
-        gradeCounts: gc(3, 3, 0, 0, 0, 1),
-      },
-      {
-        id: 'odin',
-        name: 'A Feast for Odin',
-        thumbnail: thumb('177736'),
-        rank: 5,
-        totalVotes: 7,
-        vetoed: true,
-        hardPassCount: 6,
-        gradeCounts: gc(1, 0, 0, 0, 0, 6),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'dom',
-        name: 'Dominion',
-        thumbnail: thumb('36218'),
-        rank: 1,
-        totalVotes: 7,
-        starScore: 26,
-        inRunoff: true,
-        gradeCounts: gc(2, 1, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 7,
-        starScore: 25,
-        inRunoff: true,
-        gradeCounts: gc(0, 4, 3, 0, 0, 0),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 7,
-        starScore: 20,
-        vetoed: true,
-        hardPassCount: 3,
-        gradeCounts: gc(4, 0, 0, 0, 0, 3),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 4,
-        totalVotes: 7,
-        starScore: 27,
-        vetoed: true,
-        hardPassCount: 1,
-        gradeCounts: gc(3, 3, 0, 0, 0, 1),
-      },
-      {
-        id: 'odin',
-        name: 'A Feast for Odin',
-        thumbnail: thumb('177736'),
-        rank: 5,
-        totalVotes: 7,
-        starScore: 5,
-        vetoed: true,
-        hardPassCount: 6,
-        gradeCounts: gc(1, 0, 0, 0, 0, 6),
-      },
-    ],
-    borda: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 7,
-        bordaScore: 20,
-        gradeCounts: gc(3, 3, 0, 0, 0, 1),
-      },
-      {
-        id: 'dom',
-        name: 'Dominion',
-        thumbnail: thumb('36218'),
-        rank: 2,
-        totalVotes: 7,
-        bordaScore: 16.5,
-        gradeCounts: gc(2, 1, 4, 0, 0, 0),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 7,
-        bordaScore: 15,
-        gradeCounts: gc(4, 0, 0, 0, 0, 3),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 4,
-        totalVotes: 7,
-        bordaScore: 13.5,
-        gradeCounts: gc(0, 4, 3, 0, 0, 0),
-      },
-      {
-        id: 'odin',
-        name: 'A Feast for Odin',
-        thumbnail: thumb('177736'),
-        rank: 5,
-        totalVotes: 7,
-        bordaScore: 5,
-        gradeCounts: gc(1, 0, 0, 0, 0, 6),
-      },
-    ],
-    irv: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 7,
-        gradeCounts: gc(3, 3, 0, 0, 0, 1),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 2,
-        totalVotes: 7,
-        irvElimRound: 4,
-        gradeCounts: gc(4, 0, 0, 0, 0, 3),
-      },
-      {
-        id: 'odin',
-        name: 'A Feast for Odin',
-        thumbnail: thumb('177736'),
-        rank: 3,
-        totalVotes: 7,
-        irvElimRound: 3,
-        gradeCounts: gc(1, 0, 0, 0, 0, 6),
-      },
-      {
-        id: 'dom',
-        name: 'Dominion',
-        thumbnail: thumb('36218'),
-        rank: 4,
-        totalVotes: 7,
-        irvElimRound: 2,
-        gradeCounts: gc(2, 1, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 5,
-        totalVotes: 7,
-        irvElimRound: 1,
-        gradeCounts: gc(0, 4, 3, 0, 0, 0),
-      },
-    ],
-    condorcet: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 7,
-        pairwiseWins: 4,
-        gradeCounts: gc(3, 3, 0, 0, 0, 1),
-      },
-      {
-        id: 'dom',
-        name: 'Dominion',
-        thumbnail: thumb('36218'),
-        rank: 2,
-        totalVotes: 7,
-        pairwiseWins: 3,
-        gradeCounts: gc(2, 1, 4, 0, 0, 0),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 3,
-        totalVotes: 7,
-        pairwiseWins: 2,
-        gradeCounts: gc(4, 0, 0, 0, 0, 3),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 4,
-        totalVotes: 7,
-        pairwiseWins: 1,
-        gradeCounts: gc(0, 4, 3, 0, 0, 0),
-      },
-      {
-        id: 'odin',
-        name: 'A Feast for Odin',
-        thumbnail: thumb('177736'),
-        rank: 5,
-        totalVotes: 7,
-        pairwiseWins: 0,
-        gradeCounts: gc(1, 0, 0, 0, 0, 6),
-      },
-    ],
-    condorcetParadox: false,
-    dictator: d([
-      {
-        id: 'odin',
-        name: 'A Feast for Odin',
-        thumbnail: thumb('177736'),
-        rank: 1,
-        totalVotes: 7,
-        gradeCounts: gc(1, 0, 0, 0, 0, 6),
-      },
-      {
-        id: 'dom',
-        name: 'Dominion',
-        thumbnail: thumb('36218'),
-        rank: 2,
-        totalVotes: 7,
-        gradeCounts: gc(2, 1, 4, 0, 0, 0),
-      },
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 3, totalVotes: 7, gradeCounts: gc(0, 4, 3, 0, 0, 0) },
-      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 4, totalVotes: 7, gradeCounts: gc(4, 0, 0, 0, 0, 3) },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 5,
-        totalVotes: 7,
-        gradeCounts: gc(3, 3, 0, 0, 0, 1),
-      },
-    ]),
-    dictatorName: 'Sam',
-  },
+  ballotName: 'Five-Way Split',
+  officialMethod: 'ivstar',
+  candidates: [C.brass, C.ra, C.catan, C.dom, C.odin],
+  ballots: [
+    ...block(2, 'Brass-fan-A', { brass: 'excellent', ra: 'excellent', catan: 'good', dom: 'good', odin: 'poor' }),
+    ballot('Brass-fan-B', { brass: 'excellent', ra: 'excellent', catan: 'verygood', dom: 'verygood', odin: 'poor' }),
+    ballot('Dom-fan-A', { brass: 'verygood', ra: 'excellent', catan: 'verygood', dom: 'excellent', odin: 'poor' }),
+    ballot('Dom-fan-B', { brass: 'verygood', ra: 'poor', catan: 'verygood', dom: 'excellent', odin: 'poor' }),
+    ballot('Catan-HP-Brass', { brass: 'poor', ra: 'poor', catan: 'verygood', dom: 'good', odin: 'poor' }),
+    ballot('Sam', { brass: 'verygood', ra: 'poor', catan: 'good', dom: 'good', odin: 'excellent' }),
+  ],
 };
 
-// ─── Scenario 11: Condorcet Paradox (asymmetric) ─────────────────────────────
-// 7 voters, 3 candidates — a genuine cycle where grades differ between candidates.
-//   Group A (3 voters): Ra=E, Brass=VG, Catan=Avg  →  Ra > Brass > Catan
-//   Group B (3 voters): Brass=E, Catan=VG, Ra=Good →  Brass > Catan > Ra
-//   Group C (1 voter):  Catan=E, Ra=VG,  Brass=Good → Catan > Ra > Brass
-//
-// Pairwise head-to-head:
-//   Ra  beats Brass  4-3 (groups A+C prefer Ra)
-//   Brass beats Catan  6-1 (groups A+B prefer Brass)
-//   Catan beats Ra   4-3 (groups B+C prefer Catan)
-// → Ra > Brass > Catan > Ra: genuine cycle, no Condorcet winner.
-//
-// Other methods split: MJ/Borda pick Brass (consistent highs), STAR/IRV pick Ra
-// (runoff flip from Brass). Dictator (lone Catan fan, "Morgan") picks Catan.
-const condorcetCycle: MockScenario = {
+// Condorcet Paradox (asymmetric): Ra > Brass > Catan > Ra — a genuine cycle.
+// MJ/Borda pick Brass; STAR/IRV pick Ra; Dictator (Morgan, lone Catan-fan) picks Catan.
+const condorcetCycle: ScenarioDef = {
   id: 'mock-condorcet-cycle',
   label: 'Condorcet Cycle',
   description: 'Ra>Brass>Catan>Ra — a real cycle with different grades per candidate, not just a perfect tie.',
-  tally: {
-    ballotId: 0,
-    ballotName: 'Rock Paper Scissors',
-    officialMethod: 'condorcet',
-    voteCount: 7,
-    // Grade distributions:
-    //   Ra:  3E (grpA) + 1VG (grpC) + 3Good (grpB) → gc(3,1,3,0,0,0)
-    //   Brass: 3VG (grpA) + 3E (grpB) + 1Good (grpC) → gc(3,3,1,0,0,0)
-    //   Catan: 3E→Avg (grpA) + 3VG (grpB) + 1E (grpC) → gc(1,3,0,3,0,0)
-    // MJ medians: Ra=VG (lean neutral), Brass=VG (lean up) → Brass wins MJ
-    mj: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 7,
-        gradeCounts: gc(3, 3, 1, 0, 0, 0),
-      },
-      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 2, totalVotes: 7, gradeCounts: gc(3, 1, 3, 0, 0, 0) },
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 3, totalVotes: 7, gradeCounts: gc(1, 3, 0, 3, 0, 0) },
-    ],
-    // STAR scores: Brass=30, Ra=28, Catan=23. Top 2: Brass/Ra.
-    // Runoff: grpA(3) prefer Ra(E>VG), grpB(3) prefer Brass(E>Good), grpC(1) prefer Ra(VG>Good)
-    // Ra wins runoff 4-3. STAR: Ra wins.
-    star: [
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 1,
-        totalVotes: 7,
-        starScore: 28,
-        inRunoff: true,
-        gradeCounts: gc(3, 1, 3, 0, 0, 0),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 7,
-        starScore: 30,
-        inRunoff: true,
-        gradeCounts: gc(3, 3, 1, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 7,
-        starScore: 23,
-        gradeCounts: gc(1, 3, 0, 3, 0, 0),
-      },
-    ],
-    // No Hard Passes in any camp → no vetoes. IV = base method.
-    ivmj: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 7,
-        gradeCounts: gc(3, 3, 1, 0, 0, 0),
-      },
-      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 2, totalVotes: 7, gradeCounts: gc(3, 1, 3, 0, 0, 0) },
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 3, totalVotes: 7, gradeCounts: gc(1, 3, 0, 3, 0, 0) },
-    ],
-    ivstar: [
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 1,
-        totalVotes: 7,
-        starScore: 28,
-        inRunoff: true,
-        gradeCounts: gc(3, 1, 3, 0, 0, 0),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 7,
-        starScore: 30,
-        inRunoff: true,
-        gradeCounts: gc(3, 3, 1, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 7,
-        starScore: 23,
-        gradeCounts: gc(1, 3, 0, 3, 0, 0),
-      },
-    ],
-    // Borda: Brass=9, Ra=7, Catan=5
-    borda: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 7,
-        bordaScore: 9,
-        gradeCounts: gc(3, 3, 1, 0, 0, 0),
-      },
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 2,
-        totalVotes: 7,
-        bordaScore: 7,
-        gradeCounts: gc(3, 1, 3, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 7,
-        bordaScore: 5,
-        gradeCounts: gc(1, 3, 0, 3, 0, 0),
-      },
-    ],
-    // IRV: Catan elim round 1 (1 vote → Ra). Round 2: Ra=4, Brass=3. Ra wins.
-    irv: [
-      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 1, totalVotes: 7, gradeCounts: gc(3, 1, 3, 0, 0, 0) },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 7,
-        irvElimRound: 2,
-        gradeCounts: gc(3, 3, 1, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 7,
-        irvElimRound: 1,
-        gradeCounts: gc(1, 3, 0, 3, 0, 0),
-      },
-    ],
-    // Condorcet: each candidate has 1 pairwise win. Cycle! hasParadox = true.
-    condorcet: [
-      {
-        id: 'ra',
-        name: 'Ra',
-        thumbnail: thumb('12'),
-        rank: 1,
-        totalVotes: 7,
-        pairwiseWins: 1,
-        gradeCounts: gc(3, 1, 3, 0, 0, 0),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 7,
-        pairwiseWins: 1,
-        gradeCounts: gc(3, 3, 1, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 1,
-        totalVotes: 7,
-        pairwiseWins: 1,
-        gradeCounts: gc(1, 3, 0, 3, 0, 0),
-      },
-    ],
-    condorcetParadox: true,
-    // Dictator: Morgan (the lone Group C voter, last to vote) picks Catan
-    dictator: d([
-      { id: 'catan', name: 'Catan', thumbnail: thumb('13'), rank: 1, totalVotes: 7, gradeCounts: gc(1, 3, 0, 3, 0, 0) },
-      { id: 'ra', name: 'Ra', thumbnail: thumb('12'), rank: 2, totalVotes: 7, gradeCounts: gc(3, 1, 3, 0, 0, 0) },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 3,
-        totalVotes: 7,
-        gradeCounts: gc(3, 3, 1, 0, 0, 0),
-      },
-    ]),
-    dictatorName: 'Morgan',
-  },
+  ballotName: 'Rock Paper Scissors',
+  officialMethod: 'condorcet',
+  candidates: [C.ra, C.brass, C.catan],
+  ballots: [
+    ...block(3, 'Group-A', { ra: 'excellent', brass: 'verygood', catan: 'average' }),
+    ...block(3, 'Group-B', { brass: 'excellent', catan: 'verygood', ra: 'good' }),
+    ballot('Morgan', { catan: 'excellent', ra: 'verygood', brass: 'good' }),
+  ],
 };
 
-// ─── Scenario 12: Tennessee Capital (Condorcet vs IRV) ───────────────────────
-// Classic political science example, adapted with board games as city names.
-// 20 voters split into 4 regional camps:
-//   Memphis   fans (8): Memphis=E, Nashville=VG, Chattanooga=Good, Knoxville=P
-//   Nashville fans (5): Nashville=E, Chattanooga=VG, Knoxville=Good, Memphis=P
-//   Chattanooga fans (3): Chattanooga=E, Knoxville=VG, Nashville=Good, Memphis=P
-//   Knoxville fans (4): Knoxville=E, Chattanooga=VG, Nashville=Good, Memphis=P
-//
-// Key results:
-//   Memphis has the plurality (8/20 = 40%) but loses every head-to-head.
-//   Nashville is the Condorcet winner (beats all others pairwise).
-//   IRV: Chattanooga eliminated → Knoxville; Nashville eliminated → Knoxville.
-//   Knoxville wins IRV despite Nashville being the true consensus pick!
-//   Implicit Veto knocks out Memphis AND Knoxville (both have Hard Passes).
-const tennessee: MockScenario = {
+// Tennessee Capital (Condorcet vs IRV): canonical political-science example.
+// Memphis has plurality but loses every head-to-head. Nashville is the Condorcet
+// winner. IRV picks Knoxville. Implicit Veto knocks out Memphis AND Knoxville.
+// Dictator (Kyle) is a Knoxville fan.
+const tennessee: ScenarioDef = {
   id: 'mock-tennessee',
   label: 'Tennessee Capital',
   description: 'Memphis has plurality but Nashville wins everything else — except IRV, which picks Knoxville.',
-  tally: {
-    ballotId: 0,
-    ballotName: 'Tennessee Board Game Championship',
-    officialMethod: 'condorcet',
-    voteCount: 20,
-    // Grade distributions (20 voters):
-    //   Memphis:     E=8(Mem), P=12(Nash+Chat+Knox)      → gc(8,0,0,0,0,12)
-    //   Nashville:   E=5(Nash), VG=8(Mem), Good=7(C+K)  → gc(5,8,7,0,0,0)
-    //   Chattanooga: E=3(Chat), VG=9(Nash+Knox), Good=8(Mem) → gc(3,9,8,0,0,0)
-    //   Knoxville:   E=4(Knox), VG=3(Chat), Good=5(Nash), P=8(Mem) → gc(4,3,5,0,0,8)
-    // MJ medians: Nashville=VG, Chattanooga=VG, Knoxville=Good, Memphis=P(Hard Pass)
-    // Nashville lean: above=5, below=7. Chat lean: above=3, below=8. Nashville wins.
-    mj: [
-      { id: 'nash', name: 'Nashville', thumbnail: '', rank: 1, totalVotes: 20, gradeCounts: gc(5, 8, 7, 0, 0, 0) },
-      { id: 'chat', name: 'Chattanooga', thumbnail: '', rank: 2, totalVotes: 20, gradeCounts: gc(3, 9, 8, 0, 0, 0) },
-      { id: 'knox', name: 'Knoxville', thumbnail: '', rank: 3, totalVotes: 20, gradeCounts: gc(4, 3, 5, 0, 0, 8) },
-      { id: 'mem', name: 'Memphis', thumbnail: '', rank: 4, totalVotes: 20, gradeCounts: gc(8, 0, 0, 0, 0, 12) },
-    ],
-    // STAR scores: Nashville=78, Chattanooga=75, Knoxville=47, Memphis=40
-    // Runoff Nashville vs Chattanooga: Mem(8)+Nash(5)=13 prefer Nash, Chat(3)+Knox(4)=7 prefer Chat
-    star: [
-      {
-        id: 'nash',
-        name: 'Nashville',
-        thumbnail: '',
-        rank: 1,
-        totalVotes: 20,
-        starScore: 78,
-        inRunoff: true,
-        gradeCounts: gc(5, 8, 7, 0, 0, 0),
-      },
-      {
-        id: 'chat',
-        name: 'Chattanooga',
-        thumbnail: '',
-        rank: 2,
-        totalVotes: 20,
-        starScore: 75,
-        inRunoff: true,
-        gradeCounts: gc(3, 9, 8, 0, 0, 0),
-      },
-      {
-        id: 'knox',
-        name: 'Knoxville',
-        thumbnail: '',
-        rank: 3,
-        totalVotes: 20,
-        starScore: 47,
-        gradeCounts: gc(4, 3, 5, 0, 0, 8),
-      },
-      {
-        id: 'mem',
-        name: 'Memphis',
-        thumbnail: '',
-        rank: 4,
-        totalVotes: 20,
-        starScore: 40,
-        gradeCounts: gc(8, 0, 0, 0, 0, 12),
-      },
-    ],
-    // IV: Memphis has 12 HP, Knoxville has 8 HP. Min HP = 0 (Nash, Chat). Both vetoed.
-    ivmj: [
-      { id: 'nash', name: 'Nashville', thumbnail: '', rank: 1, totalVotes: 20, gradeCounts: gc(5, 8, 7, 0, 0, 0) },
-      { id: 'chat', name: 'Chattanooga', thumbnail: '', rank: 2, totalVotes: 20, gradeCounts: gc(3, 9, 8, 0, 0, 0) },
-      {
-        id: 'knox',
-        name: 'Knoxville',
-        thumbnail: '',
-        rank: 3,
-        totalVotes: 20,
-        vetoed: true,
-        hardPassCount: 8,
-        gradeCounts: gc(4, 3, 5, 0, 0, 8),
-      },
-      {
-        id: 'mem',
-        name: 'Memphis',
-        thumbnail: '',
-        rank: 4,
-        totalVotes: 20,
-        vetoed: true,
-        hardPassCount: 12,
-        gradeCounts: gc(8, 0, 0, 0, 0, 12),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'nash',
-        name: 'Nashville',
-        thumbnail: '',
-        rank: 1,
-        totalVotes: 20,
-        starScore: 78,
-        inRunoff: true,
-        gradeCounts: gc(5, 8, 7, 0, 0, 0),
-      },
-      {
-        id: 'chat',
-        name: 'Chattanooga',
-        thumbnail: '',
-        rank: 2,
-        totalVotes: 20,
-        starScore: 75,
-        inRunoff: true,
-        gradeCounts: gc(3, 9, 8, 0, 0, 0),
-      },
-      {
-        id: 'knox',
-        name: 'Knoxville',
-        thumbnail: '',
-        rank: 3,
-        totalVotes: 20,
-        starScore: 47,
-        vetoed: true,
-        hardPassCount: 8,
-        gradeCounts: gc(4, 3, 5, 0, 0, 8),
-      },
-      {
-        id: 'mem',
-        name: 'Memphis',
-        thumbnail: '',
-        rank: 4,
-        totalVotes: 20,
-        starScore: 40,
-        vetoed: true,
-        hardPassCount: 12,
-        gradeCounts: gc(8, 0, 0, 0, 0, 12),
-      },
-    ],
-    // Borda: Nash=38, Chat=35, Memphis=24, Knox=23
-    borda: [
-      {
-        id: 'nash',
-        name: 'Nashville',
-        thumbnail: '',
-        rank: 1,
-        totalVotes: 20,
-        bordaScore: 38,
-        gradeCounts: gc(5, 8, 7, 0, 0, 0),
-      },
-      {
-        id: 'chat',
-        name: 'Chattanooga',
-        thumbnail: '',
-        rank: 2,
-        totalVotes: 20,
-        bordaScore: 35,
-        gradeCounts: gc(3, 9, 8, 0, 0, 0),
-      },
-      {
-        id: 'mem',
-        name: 'Memphis',
-        thumbnail: '',
-        rank: 3,
-        totalVotes: 20,
-        bordaScore: 24,
-        gradeCounts: gc(8, 0, 0, 0, 0, 12),
-      },
-      {
-        id: 'knox',
-        name: 'Knoxville',
-        thumbnail: '',
-        rank: 4,
-        totalVotes: 20,
-        bordaScore: 23,
-        gradeCounts: gc(4, 3, 5, 0, 0, 8),
-      },
-    ],
-    // IRV: Chat(3) eliminated → Knox. Nash(5) eliminated → Knox. Memphis vs Knox: Knox wins 12-8!
-    irv: [
-      { id: 'knox', name: 'Knoxville', thumbnail: '', rank: 1, totalVotes: 20, gradeCounts: gc(4, 3, 5, 0, 0, 8) },
-      {
-        id: 'mem',
-        name: 'Memphis',
-        thumbnail: '',
-        rank: 2,
-        totalVotes: 20,
-        irvElimRound: 3,
-        gradeCounts: gc(8, 0, 0, 0, 0, 12),
-      },
-      {
-        id: 'nash',
-        name: 'Nashville',
-        thumbnail: '',
-        rank: 3,
-        totalVotes: 20,
-        irvElimRound: 2,
-        gradeCounts: gc(5, 8, 7, 0, 0, 0),
-      },
-      {
-        id: 'chat',
-        name: 'Chattanooga',
-        thumbnail: '',
-        rank: 4,
-        totalVotes: 20,
-        irvElimRound: 1,
-        gradeCounts: gc(3, 9, 8, 0, 0, 0),
-      },
-    ],
-    // Condorcet: Nashville beats all (58% prefer Nash over Memphis, 65% over Chat/Knox)
-    //   Nash: 3 wins. Chat: 2 wins. Knox: 1 win. Memphis: 0 wins.
-    condorcet: [
-      {
-        id: 'nash',
-        name: 'Nashville',
-        thumbnail: '',
-        rank: 1,
-        totalVotes: 20,
-        pairwiseWins: 3,
-        gradeCounts: gc(5, 8, 7, 0, 0, 0),
-      },
-      {
-        id: 'chat',
-        name: 'Chattanooga',
-        thumbnail: '',
-        rank: 2,
-        totalVotes: 20,
-        pairwiseWins: 2,
-        gradeCounts: gc(3, 9, 8, 0, 0, 0),
-      },
-      {
-        id: 'knox',
-        name: 'Knoxville',
-        thumbnail: '',
-        rank: 3,
-        totalVotes: 20,
-        pairwiseWins: 1,
-        gradeCounts: gc(4, 3, 5, 0, 0, 8),
-      },
-      {
-        id: 'mem',
-        name: 'Memphis',
-        thumbnail: '',
-        rank: 4,
-        totalVotes: 20,
-        pairwiseWins: 0,
-        gradeCounts: gc(8, 0, 0, 0, 0, 12),
-      },
-    ],
-    condorcetParadox: false,
-    // Dictator: Kyle voted last — a Knoxville fan
-    dictator: d([
-      { id: 'knox', name: 'Knoxville', thumbnail: '', rank: 1, totalVotes: 20, gradeCounts: gc(4, 3, 5, 0, 0, 8) },
-      { id: 'chat', name: 'Chattanooga', thumbnail: '', rank: 2, totalVotes: 20, gradeCounts: gc(3, 9, 8, 0, 0, 0) },
-      { id: 'nash', name: 'Nashville', thumbnail: '', rank: 3, totalVotes: 20, gradeCounts: gc(5, 8, 7, 0, 0, 0) },
-      { id: 'mem', name: 'Memphis', thumbnail: '', rank: 4, totalVotes: 20, gradeCounts: gc(8, 0, 0, 0, 0, 12) },
-    ]),
-    dictatorName: 'Kyle',
-  },
+  ballotName: 'Tennessee Board Game Championship',
+  officialMethod: 'condorcet',
+  candidates: [C.mem, C.nash, C.chat, C.knox],
+  ballots: [
+    ...block(8, 'Memphis-fan', { mem: 'excellent', nash: 'verygood', chat: 'good', knox: 'poor' }),
+    ...block(5, 'Nashville-fan', { nash: 'excellent', chat: 'verygood', knox: 'good', mem: 'poor' }),
+    ...block(3, 'Chattanooga-fan', { chat: 'excellent', knox: 'verygood', nash: 'good', mem: 'poor' }),
+    ...block(3, 'Knoxville-fan', { knox: 'excellent', chat: 'verygood', nash: 'good', mem: 'poor' }),
+    ballot('Kyle', { knox: 'excellent', chat: 'verygood', nash: 'good', mem: 'poor' }),
+  ],
 };
 
-// ─── Scenario: IRV Non-Monotonicity — Baseline ───────────────────────────────
-// 17 voters split four ways (the canonical Woodall example — smaller variants
-// hit ties). Harmonies wins every method, including IRV. Pairwise comparisons
-// form a cycle (Harmonies > Brass > Catan > Harmonies), so Condorcet has no
-// winner. Morgan is the last voter, in the brass>wing>catan camp — Dictator
-// picks Brass.
-//
-// IRV rounds: R1 wing=6, brass=6, catan=5 → catan eliminated.
-//             R2 wing=11, brass=6 → Harmonies wins.
-//
-// Companion to irvRaised: raising Harmonies in two ballots makes IRV flip.
-const irvSincere: MockScenario = {
+// IRV Non-Monotonicity — Baseline: Harmonies wins every method, including IRV.
+// Vote layout is the classic 17-voter non-monotonicity construction (Tideman):
+// brass-fans rank brass > catan > harm (so catan absorbs their transfer if brass
+// is eliminated, NOT harm). Catan eliminated first, transfers to harm. Harm wins.
+// Companion scenario raises Harmonies in two ballots and IRV flips.
+const irvSincere: ScenarioDef = {
   id: 'mock-irv-sincere',
   label: 'IRV — Baseline',
   description:
-    'Harmonies wins every method, including IRV. Its companion scenario raises Harmonies on two ballots — and IRV kicks Harmonies out.',
+    'IRV picks Harmonies; MJ confirms it. Its companion scenario raises Harmonies on two ballots — and IRV kicks Harmonies out.',
   related: { id: 'mock-irv-raised', label: 'IRV — Raising Backfires' },
-  tally: {
-    ballotId: 0,
-    ballotName: 'Board Game Showdown — Baseline Ballots',
-    officialMethod: 'irv',
-    voteCount: 17,
-    mj: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 17,
-        gradeCounts: gc(6, 7, 0, 0, 0, 4),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 17,
-        gradeCounts: gc(6, 6, 0, 0, 0, 5),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 17,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-    ],
-    star: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 17,
-        starScore: 58,
-        inRunoff: true,
-        gradeCounts: gc(6, 7, 0, 0, 0, 4),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 17,
-        starScore: 54,
-        inRunoff: true,
-        gradeCounts: gc(6, 6, 0, 0, 0, 5),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 17,
-        starScore: 37,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-    ],
-    ivmj: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 17,
-        gradeCounts: gc(6, 7, 0, 0, 0, 4),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 17,
-        vetoed: true,
-        hardPassCount: 5,
-        gradeCounts: gc(6, 6, 0, 0, 0, 5),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 17,
-        vetoed: true,
-        hardPassCount: 8,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 17,
-        starScore: 58,
-        inRunoff: true,
-        gradeCounts: gc(6, 7, 0, 0, 0, 4),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 17,
-        starScore: 54,
-        vetoed: true,
-        hardPassCount: 5,
-        gradeCounts: gc(6, 6, 0, 0, 0, 5),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 17,
-        starScore: 37,
-        vetoed: true,
-        hardPassCount: 8,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-    ],
-    borda: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 17,
-        bordaScore: 19,
-        gradeCounts: gc(6, 7, 0, 0, 0, 4),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 17,
-        bordaScore: 18,
-        gradeCounts: gc(6, 6, 0, 0, 0, 5),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 17,
-        bordaScore: 14,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-    ],
-    irv: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 17,
-        gradeCounts: gc(6, 7, 0, 0, 0, 4),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 17,
-        irvElimRound: 2,
-        gradeCounts: gc(6, 6, 0, 0, 0, 5),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 17,
-        irvElimRound: 1,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-    ],
-    condorcet: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 17,
-        pairwiseWins: 1,
-        gradeCounts: gc(6, 7, 0, 0, 0, 4),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 17,
-        pairwiseWins: 1,
-        gradeCounts: gc(6, 6, 0, 0, 0, 5),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 1,
-        totalVotes: 17,
-        pairwiseWins: 1,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-    ],
-    condorcetParadox: true,
-    dictator: d([
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 17,
-        gradeCounts: gc(6, 6, 0, 0, 0, 5),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 2,
-        totalVotes: 17,
-        gradeCounts: gc(6, 7, 0, 0, 0, 4),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 17,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-    ]),
-    dictatorName: 'Morgan',
-  },
+  ballotName: 'Board Game Showdown — Baseline Ballots',
+  officialMethod: 'irv',
+  candidates: [C.harmonies, C.brass, C.catan],
+  ballots: [
+    ...block(6, 'Harmonies-fan', { harmonies: 'excellent', brass: 'good', catan: 'fair' }),
+    ...block(5, 'Brass-then-Catan', { brass: 'excellent', catan: 'verygood', harmonies: 'fair' }),
+    ...block(5, 'Catan-then-Harmonies', { catan: 'excellent', harmonies: 'verygood', brass: 'fair' }),
+    ballot('Morgan', { brass: 'excellent', catan: 'verygood', harmonies: 'fair' }),
+  ],
 };
 
-// ─── Scenario: IRV Non-Monotonicity — Raised ─────────────────────────────────
-// Same 17 voters — Morgan and one peer flip brass>wing>catan to wing>brass>catan
-// (raising their second-favorite Harmonies to first). Every score-based method
-// still picks Harmonies, and A's scores actually rise. But IRV now eliminates
-// Brass first, transfers its ballots to Catan, and Catan wins.
-//
-// IRV rounds: R1 wing=8, brass=4, catan=5 → brass eliminated.
-//             R2 wing=8, catan=9 → Catan wins.
-//
-// Classic non-monotonicity: raising a candidate caused them to lose.
-const irvRaised: MockScenario = {
+// IRV Non-Monotonicity — Raised: Morgan and one peer flip brass>catan>harm to
+// harm>brass>catan (raising Harmonies to #1). Score-based methods still pick
+// Harmonies. But IRV now eliminates Brass first; brass voters' #2 is catan, so
+// the transfer lifts Catan to a majority. Raising Harmonies caused Harmonies to
+// lose — classic non-monotonicity.
+const irvRaised: ScenarioDef = {
   id: 'mock-irv-raised',
   label: 'IRV — Raising Backfires',
   description:
-    'Same ballot as the Baseline — but two voters bump Harmonies to first. IRV now eliminates Brass, transfers the votes to Catan, and Catan wins. Raising Harmonies made Harmonies lose.',
+    'Two voters raise Harmonies from #3 to #1. Score-based methods still pick Harmonies — its scores actually rise — but IRV eliminates Brass first, the transfers flow to Catan, and Catan wins. Raising a candidate caused them to lose.',
   related: { id: 'mock-irv-sincere', label: 'IRV — Baseline' },
-  tally: {
-    ballotId: 0,
-    ballotName: 'Board Game Showdown — Harmonies Raised',
-    officialMethod: 'irv',
-    voteCount: 17,
-    mj: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 17,
-        gradeCounts: gc(8, 5, 0, 0, 0, 4),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 17,
-        gradeCounts: gc(4, 8, 0, 0, 0, 5),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 17,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-    ],
-    star: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 17,
-        starScore: 60,
-        inRunoff: true,
-        gradeCounts: gc(8, 5, 0, 0, 0, 4),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 17,
-        starScore: 52,
-        inRunoff: true,
-        gradeCounts: gc(4, 8, 0, 0, 0, 5),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 17,
-        starScore: 37,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-    ],
-    ivmj: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 17,
-        gradeCounts: gc(8, 5, 0, 0, 0, 4),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 17,
-        vetoed: true,
-        hardPassCount: 5,
-        gradeCounts: gc(4, 8, 0, 0, 0, 5),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 17,
-        vetoed: true,
-        hardPassCount: 8,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 17,
-        starScore: 60,
-        inRunoff: true,
-        gradeCounts: gc(8, 5, 0, 0, 0, 4),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 17,
-        starScore: 52,
-        vetoed: true,
-        hardPassCount: 5,
-        gradeCounts: gc(4, 8, 0, 0, 0, 5),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 17,
-        starScore: 37,
-        vetoed: true,
-        hardPassCount: 8,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-    ],
-    borda: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 17,
-        bordaScore: 21,
-        gradeCounts: gc(8, 5, 0, 0, 0, 4),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 17,
-        bordaScore: 16,
-        gradeCounts: gc(4, 8, 0, 0, 0, 5),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 17,
-        bordaScore: 14,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-    ],
-    irv: [
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 1,
-        totalVotes: 17,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 2,
-        totalVotes: 17,
-        irvElimRound: 2,
-        gradeCounts: gc(8, 5, 0, 0, 0, 4),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 3,
-        totalVotes: 17,
-        irvElimRound: 1,
-        gradeCounts: gc(4, 8, 0, 0, 0, 5),
-      },
-    ],
-    condorcet: [
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 17,
-        pairwiseWins: 1,
-        gradeCounts: gc(8, 5, 0, 0, 0, 4),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 17,
-        pairwiseWins: 1,
-        gradeCounts: gc(4, 8, 0, 0, 0, 5),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 1,
-        totalVotes: 17,
-        pairwiseWins: 1,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-    ],
-    condorcetParadox: true,
-    dictator: d([
-      {
-        id: 'harmonies',
-        name: 'Harmonies',
-        thumbnail: thumb('414317'),
-        rank: 1,
-        totalVotes: 17,
-        gradeCounts: gc(8, 5, 0, 0, 0, 4),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 17,
-        gradeCounts: gc(4, 8, 0, 0, 0, 5),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 17,
-        gradeCounts: gc(5, 0, 4, 0, 0, 8),
-      },
-    ]),
-    dictatorName: 'Morgan',
-  },
+  ballotName: 'Board Game Showdown — Harmonies Raised',
+  officialMethod: 'irv',
+  candidates: [C.harmonies, C.brass, C.catan],
+  ballots: [
+    ...block(6, 'Harmonies-fan', { harmonies: 'excellent', brass: 'good', catan: 'fair' }),
+    ...block(4, 'Brass-then-Catan', { brass: 'excellent', catan: 'verygood', harmonies: 'fair' }),
+    ballot('Raised-1', { harmonies: 'excellent', brass: 'verygood', catan: 'fair' }),
+    ...block(5, 'Catan-then-Harmonies', { catan: 'excellent', harmonies: 'verygood', brass: 'fair' }),
+    ballot('Morgan', { harmonies: 'excellent', brass: 'verygood', catan: 'fair' }),
+  ],
 };
 
-// ─── Scenario: Compromise Wins ───────────────────────────────────────────────
-// 11 voters, 3 games. Two factions love a polarizing favorite; a third faction
-// backs the compromise that everyone else rates "pretty good." STAR, MJ, Borda,
-// Condorcet, and both IV methods all pick the compromise. IRV alone throws the
-// compromise out in round 1 (fewest first-place votes) and deadlocks A vs B.
-//
-//   4 Twilight-fans:  TI=E, CN=VG, Catan=P
-//   4 Catan-fans:     Catan=E, CN=VG, TI=P
-//   3 Codenames-fans: CN=E, TI=G, Catan=G
-//
-// Last voter (Riley) is a CN-fan, so Dictator also picks Codenames.
-const compromiseWins: MockScenario = {
+// Compromise Wins: two factions pick polarizing favorites; a third backs the
+// compromise everyone else tolerates. Seven methods lift the compromise.
+// IRV alone eliminates it (fewest first-place votes) and then deadlocks
+// the polarizers. Dictator (Riley) is a Codenames-fan.
+const compromiseWins: ScenarioDef = {
   id: 'mock-compromise-wins',
   label: 'Compromise Wins',
   description:
     'Two factions pick polarizing favorites; a third picks the game everyone tolerates. Seven methods lift the compromise. IRV alone eliminates it and then deadlocks on the polarizers.',
-  tally: {
-    ballotId: 0,
-    ballotName: 'Heavy vs Light vs Everyone-Likes-It',
-    officialMethod: 'star',
-    voteCount: 11,
-    mj: [
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 11,
-        gradeCounts: gc(3, 8, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 11,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 3,
-        totalVotes: 11,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-    ],
-    star: [
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 11,
-        starScore: 47,
-        inRunoff: true,
-        gradeCounts: gc(3, 8, 0, 0, 0, 0),
-      },
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 2,
-        totalVotes: 11,
-        starScore: 29,
-        inRunoff: true,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 11,
-        starScore: 29,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-    ],
-    ivmj: [
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 11,
-        gradeCounts: gc(3, 8, 0, 0, 0, 0),
-      },
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 2,
-        totalVotes: 11,
-        vetoed: true,
-        hardPassCount: 4,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 11,
-        vetoed: true,
-        hardPassCount: 4,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 11,
-        starScore: 47,
-        inRunoff: true,
-        gradeCounts: gc(3, 8, 0, 0, 0, 0),
-      },
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 2,
-        totalVotes: 11,
-        starScore: 29,
-        vetoed: true,
-        hardPassCount: 4,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 11,
-        starScore: 29,
-        vetoed: true,
-        hardPassCount: 4,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-    ],
-    borda: [
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 11,
-        bordaScore: 14,
-        gradeCounts: gc(3, 8, 0, 0, 0, 0),
-      },
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 2,
-        totalVotes: 11,
-        bordaScore: 9.5,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 11,
-        bordaScore: 9.5,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-    ],
-    irv: [
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 1,
-        totalVotes: 11,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 1,
-        totalVotes: 11,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 11,
-        irvElimRound: 1,
-        gradeCounts: gc(3, 8, 0, 0, 0, 0),
-      },
-    ],
-    condorcet: [
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 11,
-        pairwiseWins: 2,
-        gradeCounts: gc(3, 8, 0, 0, 0, 0),
-      },
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 2,
-        totalVotes: 11,
-        pairwiseWins: 0,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 11,
-        pairwiseWins: 0,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-    ],
-    condorcetParadox: false,
-    dictator: d([
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 11,
-        gradeCounts: gc(3, 8, 0, 0, 0, 0),
-      },
-      {
-        id: 'barrage',
-        name: 'Barrage',
-        thumbnail: thumb('251247'),
-        rank: 2,
-        totalVotes: 11,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 11,
-        gradeCounts: gc(4, 0, 3, 0, 0, 4),
-      },
-    ]),
-    dictatorName: 'Riley',
-  },
+  ballotName: 'Heavy vs Light vs Everyone-Likes-It',
+  officialMethod: 'star',
+  candidates: [C.barrage, C.codenames, C.catan],
+  ballots: [
+    ...block(4, 'Barrage-fan', { barrage: 'excellent', codenames: 'verygood', catan: 'poor' }),
+    ...block(4, 'Catan-fan', { catan: 'excellent', codenames: 'verygood', barrage: 'poor' }),
+    ...block(2, 'CN-fan', { codenames: 'excellent', barrage: 'good', catan: 'good' }),
+    ballot('Riley', { codenames: 'excellent', barrage: 'good', catan: 'good' }),
+  ],
 };
 
-// ─── Scenario: Borda Burying — Honest ────────────────────────────────────────
-// 11 voters, 3 games. Codenames is the broad-consensus compromise.
-//   5 Brass-fans: Brass=E, Codenames=VG, Catan=G
-//   4 Catan-fans: Catan=E, Codenames=VG, Brass=G
-//   2 Codenames-fans: Codenames=E, Brass=VG, Catan=G
-// Codenames wins STAR, Borda, Condorcet, IV·STAR (broad support). MJ and IRV
-// still pick Brass (first-place strength). Honest baseline for bordaStrategic.
-const bordaHonest: MockScenario = {
+// Borda Burying — Honest: Codenames is the broad-consensus compromise.
+// Codenames wins STAR/Borda/Condorcet/IV·STAR; MJ and IRV still pick Brass.
+// Honest baseline for bordaStrategic.
+const bordaHonest: ScenarioDef = {
   id: 'mock-borda-honest',
   label: 'Borda Burying — Honest',
   description:
-    'Codenames is everyone\u2019s pretty-good compromise — it wins STAR, Borda, and Condorcet. Its companion scenario shows what happens when Brass-fans try to game Borda by burying Codenames.',
+    "Codenames is the broad consensus — five voters' second choice. STAR, Borda, Condorcet, and IV·STAR all crown it. MJ and IRV still pick Brass on first-place strength. Honest baseline for the strategic companion.",
   related: { id: 'mock-borda-strategic', label: 'Borda Burying — Strategic' },
-  tally: {
-    ballotId: 0,
-    ballotName: 'Honest Ballots',
-    officialMethod: 'borda',
-    voteCount: 11,
-    mj: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 11,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 2,
-        totalVotes: 11,
-        gradeCounts: gc(2, 9, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 11,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-    ],
-    star: [
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 11,
-        starScore: 46,
-        inRunoff: true,
-        gradeCounts: gc(2, 9, 0, 0, 0, 0),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 11,
-        starScore: 45,
-        inRunoff: true,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 11,
-        starScore: 41,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-    ],
-    ivmj: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 11,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 2,
-        totalVotes: 11,
-        gradeCounts: gc(2, 9, 0, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 11,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 11,
-        starScore: 46,
-        inRunoff: true,
-        gradeCounts: gc(2, 9, 0, 0, 0, 0),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 11,
-        starScore: 45,
-        inRunoff: true,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 11,
-        starScore: 41,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-    ],
-    borda: [
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 11,
-        bordaScore: 13,
-        gradeCounts: gc(2, 9, 0, 0, 0, 0),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 11,
-        bordaScore: 12,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 11,
-        bordaScore: 8,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-    ],
-    irv: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 11,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 11,
-        irvElimRound: 2,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 11,
-        irvElimRound: 1,
-        gradeCounts: gc(2, 9, 0, 0, 0, 0),
-      },
-    ],
-    condorcet: [
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 11,
-        pairwiseWins: 2,
-        gradeCounts: gc(2, 9, 0, 0, 0, 0),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 11,
-        pairwiseWins: 1,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 11,
-        pairwiseWins: 0,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-    ],
-    condorcetParadox: false,
-    dictator: d([
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 11,
-        gradeCounts: gc(2, 9, 0, 0, 0, 0),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 11,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 11,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-    ]),
-    dictatorName: 'Avery',
-  },
+  ballotName: 'Honest Ballots',
+  officialMethod: 'borda',
+  candidates: [C.brass, C.codenames, C.catan],
+  ballots: [
+    ...block(5, 'Brass-fan', { brass: 'excellent', codenames: 'verygood', catan: 'good' }),
+    ...block(4, 'Catan-fan', { catan: 'excellent', codenames: 'verygood', brass: 'good' }),
+    ...block(2, 'CN-fan', { codenames: 'excellent', brass: 'verygood', catan: 'good' }),
+  ],
 };
 
-// ─── Scenario: Borda Burying — Strategic ─────────────────────────────────────
-// Same 11 voters, except the 5 Brass-fans strategically bury Codenames —
-// rating it Poor instead of VeryGood to knock out the consensus threat.
-// STAR: strategy succeeds (Brass flips to #1). Borda: backfires! The burial
-// also demoted Codenames below Catan on the Brass-fan ballots, handing Borda
-// to Catan. Condorcet becomes a cycle. IV·MJ now vetoes Codenames.
-//
-// The takeaway: naïve strategic voting is a gamble — it can tip the method you
-// care about, and simultaneously break others you don't.
-const bordaStrategic: MockScenario = {
+// Borda Burying — Strategic: Brass-fans bury Codenames as Poor. STAR succeeds
+// (Brass flips to #1). Borda backfires — burying drops Codenames below Catan
+// on their ballots, handing Borda to Catan. Condorcet becomes a cycle.
+const bordaStrategic: ScenarioDef = {
   id: 'mock-borda-strategic',
   label: 'Borda Burying — Strategic',
   description:
-    'Same voters as the Honest ballot, but Brass-fans downgrade Codenames to Poor to kill the compromise. STAR flips to Brass (strategy works). Borda flips to Catan — burying Codenames accidentally elevated Catan on their ballots.',
+    'Brass-fans strategically bury Codenames at Poor. STAR strategy succeeds — Brass flips to #1. Borda backfires: burying demotes Codenames below Catan and hands Borda to Catan. Condorcet becomes a cycle.',
   related: { id: 'mock-borda-honest', label: 'Borda Burying — Honest' },
-  tally: {
-    ballotId: 0,
-    ballotName: 'Brass-Fans Bury the Compromise',
-    officialMethod: 'borda',
-    voteCount: 11,
-    mj: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 11,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 2,
-        totalVotes: 11,
-        gradeCounts: gc(2, 4, 0, 0, 0, 5),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 11,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-    ],
-    star: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 11,
-        starScore: 45,
-        inRunoff: true,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 11,
-        starScore: 41,
-        inRunoff: true,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 11,
-        starScore: 26,
-        gradeCounts: gc(2, 4, 0, 0, 0, 5),
-      },
-    ],
-    ivmj: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 11,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 11,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 11,
-        vetoed: true,
-        hardPassCount: 5,
-        gradeCounts: gc(2, 4, 0, 0, 0, 5),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 11,
-        starScore: 45,
-        inRunoff: true,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 11,
-        starScore: 41,
-        inRunoff: true,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 11,
-        starScore: 26,
-        vetoed: true,
-        hardPassCount: 5,
-        gradeCounts: gc(2, 4, 0, 0, 0, 5),
-      },
-    ],
-    borda: [
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 1,
-        totalVotes: 11,
-        bordaScore: 13,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 11,
-        bordaScore: 12,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 11,
-        bordaScore: 8,
-        gradeCounts: gc(2, 4, 0, 0, 0, 5),
-      },
-    ],
-    irv: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 11,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 2,
-        totalVotes: 11,
-        irvElimRound: 2,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 11,
-        irvElimRound: 1,
-        gradeCounts: gc(2, 4, 0, 0, 0, 5),
-      },
-    ],
-    condorcet: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 11,
-        pairwiseWins: 1,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 1,
-        totalVotes: 11,
-        pairwiseWins: 1,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 11,
-        pairwiseWins: 1,
-        gradeCounts: gc(2, 4, 0, 0, 0, 5),
-      },
-    ],
-    condorcetParadox: true,
-    dictator: d([
-      {
-        id: 'cn',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 1,
-        totalVotes: 11,
-        gradeCounts: gc(2, 4, 0, 0, 0, 5),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 11,
-        gradeCounts: gc(5, 2, 4, 0, 0, 0),
-      },
-      {
-        id: 'catan',
-        name: 'Catan',
-        thumbnail: thumb('13'),
-        rank: 3,
-        totalVotes: 11,
-        gradeCounts: gc(4, 0, 7, 0, 0, 0),
-      },
-    ]),
-    dictatorName: 'Avery',
-  },
+  ballotName: 'Brass-Fans Bury the Compromise',
+  officialMethod: 'borda',
+  candidates: [C.brass, C.codenames, C.catan],
+  ballots: [
+    ...block(5, 'Brass-fan-strategic', { brass: 'excellent', codenames: 'poor', catan: 'fair' }),
+    ...block(4, 'Catan-fan', { catan: 'excellent', codenames: 'verygood', brass: 'good' }),
+    ...block(2, 'CN-fan', { codenames: 'excellent', brass: 'verygood', catan: 'good' }),
+  ],
 };
 
-// ─── Scenario: Borda Teaming — Before ────────────────────────────────────────
-// 12 voters, 3 games.
-//   7 Brass-fans:    Brass=E, Pandemic=G, Codenames=P
-//   5 Pandemic-fans: Pandemic=E, Brass=G, Codenames=P
-// Brass wins every method; Pandemic is a solid second. Codenames gets hard-
-// passed by everyone (12/12 P) so IV·MJ/IV·STAR veto it. Companion scenario
-// adds three co-op clones — Borda flips to Pandemic, everyone else holds.
-const teamingBefore: MockScenario = {
+// Borda Teaming — Before: small slate. Brass wins everything; Pandemic solid
+// second. Codenames hard-passed by everyone. Companion scenario adds clones
+// and Borda flips.
+const teamingBefore: ScenarioDef = {
   id: 'mock-borda-teaming-before',
   label: 'Borda Teaming — Before',
   description:
     'Brass is the obvious winner — it sweeps every method, with Pandemic a solid second. Its companion scenario adds three more co-ops to the slate, and Borda alone flips to Pandemic.',
   related: { id: 'mock-borda-teaming-after', label: 'Borda Teaming — After' },
-  tally: {
-    ballotId: 0,
-    ballotName: 'Small Slate',
-    officialMethod: 'borda',
-    voteCount: 12,
-    mj: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 12,
-        gradeCounts: gc(7, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 12,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 12,
-        gradeCounts: gc(0, 0, 0, 0, 0, 12),
-      },
-    ],
-    star: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 12,
-        starScore: 50,
-        inRunoff: true,
-        gradeCounts: gc(7, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 12,
-        starScore: 46,
-        inRunoff: true,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 12,
-        starScore: 0,
-        gradeCounts: gc(0, 0, 0, 0, 0, 12),
-      },
-    ],
-    ivmj: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 12,
-        gradeCounts: gc(7, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 12,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 12,
-        vetoed: true,
-        hardPassCount: 12,
-        gradeCounts: gc(0, 0, 0, 0, 0, 12),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 12,
-        starScore: 50,
-        inRunoff: true,
-        gradeCounts: gc(7, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 12,
-        starScore: 46,
-        inRunoff: true,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 12,
-        starScore: 0,
-        vetoed: true,
-        hardPassCount: 12,
-        gradeCounts: gc(0, 0, 0, 0, 0, 12),
-      },
-    ],
-    borda: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 12,
-        bordaScore: 19,
-        gradeCounts: gc(7, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 12,
-        bordaScore: 17,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 12,
-        bordaScore: 0,
-        gradeCounts: gc(0, 0, 0, 0, 0, 12),
-      },
-    ],
-    irv: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 12,
-        gradeCounts: gc(7, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 12,
-        irvElimRound: 2,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 12,
-        irvElimRound: 1,
-        gradeCounts: gc(0, 0, 0, 0, 0, 12),
-      },
-    ],
-    condorcet: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 12,
-        pairwiseWins: 2,
-        gradeCounts: gc(7, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 12,
-        pairwiseWins: 1,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 12,
-        pairwiseWins: 0,
-        gradeCounts: gc(0, 0, 0, 0, 0, 12),
-      },
-    ],
-    condorcetParadox: false,
-    dictator: d([
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 12,
-        gradeCounts: gc(7, 0, 5, 0, 0, 0),
-      },
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 12,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 12,
-        gradeCounts: gc(0, 0, 0, 0, 0, 12),
-      },
-    ]),
-    dictatorName: 'Morgan',
-  },
+  ballotName: 'Small Slate',
+  officialMethod: 'borda',
+  candidates: [C.brass, C.pandemic, C.codenames],
+  ballots: [
+    ...block(7, 'Brass-fan', { brass: 'excellent', pandemic: 'good', codenames: 'poor' }),
+    ...block(4, 'Pandemic-fan', { pandemic: 'excellent', brass: 'good', codenames: 'poor' }),
+    ballot('Morgan', { pandemic: 'excellent', brass: 'good', codenames: 'poor' }),
+  ],
 };
 
-// ─── Scenario: Borda Teaming — After ─────────────────────────────────────────
-// Same 12 voters, same preferences. Pandemic-fans have nominated three more
-// co-ops they love (Spirit Island, Forbidden Island, The Crew). Brass-fans
-// rank those clones low, brass high; Pandemic-fans put them just under
-// Pandemic. With 6 candidates, Borda's rank-based points now reward Pandemic
-// for being #1 with the Pandemic-fans AND above Brass on their ballots —
-// while Brass-fans spread their middle-to-low points across the co-ops.
-// Borda: pan=46, brass=40, spirit=34, code=28, forbidden=22, sky=10.
-// Every other method — STAR (via runoff), MJ, IV·MJ, IV·STAR, IRV, Condorcet
-// — still picks Brass. IV·MJ vetoes Codenames (5/12 P) and The Crew (7/12 P).
-const teamingAfter: MockScenario = {
+// Borda Teaming — After: same 12 voters; Pandemic-fans nominate three more
+// co-ops they love. Brass-fans rank clones low, brass high; Pandemic-fans
+// rank clones just under Pandemic. With 6 candidates, Borda's rank-based
+// math hands Pandemic the win. All other methods still pick Brass.
+const teamingAfter: ScenarioDef = {
   id: 'mock-borda-teaming-after',
   label: 'Borda Teaming — After',
   description:
-    'Same 12 voters, same preferences — but Pandemic-fans nominated three more co-ops (Spirit Island, Forbidden Island, The Crew). Borda now picks Pandemic. Every other method still picks Brass, catching the clone attack.',
+    'Pandemic-fans nominate three co-op clones (Spirit Island, Forbidden Island, The Crew). Borda alone flips to Pandemic — rank-based points reward broad mid-pack placement. Every other method still picks Brass.',
   related: { id: 'mock-borda-teaming-before', label: 'Borda Teaming — Before' },
-  tally: {
-    ballotId: 0,
-    ballotName: 'Cloned Slate',
-    officialMethod: 'borda',
-    voteCount: 12,
-    mj: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 12,
-        gradeCounts: gc(7, 0, 0, 0, 5, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 2,
-        totalVotes: 12,
-        gradeCounts: gc(0, 7, 0, 0, 0, 5),
-      },
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 3,
-        totalVotes: 12,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'spirit',
-        name: 'Spirit Island',
-        thumbnail: thumb('162886'),
-        rank: 4,
-        totalVotes: 12,
-        gradeCounts: gc(0, 5, 0, 7, 0, 0),
-      },
-      {
-        id: 'forbidden',
-        name: 'Forbidden Island',
-        thumbnail: thumb('65244'),
-        rank: 5,
-        totalVotes: 12,
-        gradeCounts: gc(0, 0, 5, 0, 7, 0),
-      },
-      {
-        id: 'crew',
-        name: 'The Crew: Mission Deep Sea',
-        thumbnail: thumb('324856'),
-        rank: 6,
-        totalVotes: 12,
-        gradeCounts: gc(0, 0, 0, 5, 0, 7),
-      },
-    ],
-    star: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 12,
-        starScore: 40,
-        inRunoff: true,
-        gradeCounts: gc(7, 0, 0, 0, 5, 0),
-      },
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 12,
-        starScore: 46,
-        inRunoff: true,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'spirit',
-        name: 'Spirit Island',
-        thumbnail: thumb('162886'),
-        rank: 3,
-        totalVotes: 12,
-        starScore: 34,
-        gradeCounts: gc(0, 5, 0, 7, 0, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 4,
-        totalVotes: 12,
-        starScore: 28,
-        gradeCounts: gc(0, 7, 0, 0, 0, 5),
-      },
-      {
-        id: 'forbidden',
-        name: 'Forbidden Island',
-        thumbnail: thumb('65244'),
-        rank: 5,
-        totalVotes: 12,
-        starScore: 22,
-        gradeCounts: gc(0, 0, 5, 0, 7, 0),
-      },
-      {
-        id: 'crew',
-        name: 'The Crew: Mission Deep Sea',
-        thumbnail: thumb('324856'),
-        rank: 6,
-        totalVotes: 12,
-        starScore: 10,
-        gradeCounts: gc(0, 0, 0, 5, 0, 7),
-      },
-    ],
-    ivmj: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 12,
-        gradeCounts: gc(7, 0, 0, 0, 5, 0),
-      },
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 12,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'spirit',
-        name: 'Spirit Island',
-        thumbnail: thumb('162886'),
-        rank: 3,
-        totalVotes: 12,
-        gradeCounts: gc(0, 5, 0, 7, 0, 0),
-      },
-      {
-        id: 'forbidden',
-        name: 'Forbidden Island',
-        thumbnail: thumb('65244'),
-        rank: 4,
-        totalVotes: 12,
-        gradeCounts: gc(0, 0, 5, 0, 7, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 5,
-        totalVotes: 12,
-        vetoed: true,
-        hardPassCount: 5,
-        gradeCounts: gc(0, 7, 0, 0, 0, 5),
-      },
-      {
-        id: 'crew',
-        name: 'The Crew: Mission Deep Sea',
-        thumbnail: thumb('324856'),
-        rank: 6,
-        totalVotes: 12,
-        vetoed: true,
-        hardPassCount: 7,
-        gradeCounts: gc(0, 0, 0, 5, 0, 7),
-      },
-    ],
-    ivstar: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 12,
-        starScore: 40,
-        inRunoff: true,
-        gradeCounts: gc(7, 0, 0, 0, 5, 0),
-      },
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 12,
-        starScore: 46,
-        inRunoff: true,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'spirit',
-        name: 'Spirit Island',
-        thumbnail: thumb('162886'),
-        rank: 3,
-        totalVotes: 12,
-        starScore: 34,
-        gradeCounts: gc(0, 5, 0, 7, 0, 0),
-      },
-      {
-        id: 'forbidden',
-        name: 'Forbidden Island',
-        thumbnail: thumb('65244'),
-        rank: 4,
-        totalVotes: 12,
-        starScore: 22,
-        gradeCounts: gc(0, 0, 5, 0, 7, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 5,
-        totalVotes: 12,
-        starScore: 28,
-        vetoed: true,
-        hardPassCount: 5,
-        gradeCounts: gc(0, 7, 0, 0, 0, 5),
-      },
-      {
-        id: 'crew',
-        name: 'The Crew: Mission Deep Sea',
-        thumbnail: thumb('324856'),
-        rank: 6,
-        totalVotes: 12,
-        starScore: 10,
-        vetoed: true,
-        hardPassCount: 7,
-        gradeCounts: gc(0, 0, 0, 5, 0, 7),
-      },
-    ],
-    borda: [
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 1,
-        totalVotes: 12,
-        bordaScore: 46,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 2,
-        totalVotes: 12,
-        bordaScore: 40,
-        gradeCounts: gc(7, 0, 0, 0, 5, 0),
-      },
-      {
-        id: 'spirit',
-        name: 'Spirit Island',
-        thumbnail: thumb('162886'),
-        rank: 3,
-        totalVotes: 12,
-        bordaScore: 34,
-        gradeCounts: gc(0, 5, 0, 7, 0, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 4,
-        totalVotes: 12,
-        bordaScore: 28,
-        gradeCounts: gc(0, 7, 0, 0, 0, 5),
-      },
-      {
-        id: 'forbidden',
-        name: 'Forbidden Island',
-        thumbnail: thumb('65244'),
-        rank: 5,
-        totalVotes: 12,
-        bordaScore: 22,
-        gradeCounts: gc(0, 0, 5, 0, 7, 0),
-      },
-      {
-        id: 'crew',
-        name: 'The Crew: Mission Deep Sea',
-        thumbnail: thumb('324856'),
-        rank: 6,
-        totalVotes: 12,
-        bordaScore: 10,
-        gradeCounts: gc(0, 0, 0, 5, 0, 7),
-      },
-    ],
-    irv: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 12,
-        gradeCounts: gc(7, 0, 0, 0, 5, 0),
-      },
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 2,
-        totalVotes: 12,
-        irvElimRound: 2,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 3,
-        totalVotes: 12,
-        irvElimRound: 1,
-        gradeCounts: gc(0, 7, 0, 0, 0, 5),
-      },
-      {
-        id: 'spirit',
-        name: 'Spirit Island',
-        thumbnail: thumb('162886'),
-        rank: 3,
-        totalVotes: 12,
-        irvElimRound: 1,
-        gradeCounts: gc(0, 5, 0, 7, 0, 0),
-      },
-      {
-        id: 'forbidden',
-        name: 'Forbidden Island',
-        thumbnail: thumb('65244'),
-        rank: 3,
-        totalVotes: 12,
-        irvElimRound: 1,
-        gradeCounts: gc(0, 0, 5, 0, 7, 0),
-      },
-      {
-        id: 'crew',
-        name: 'The Crew: Mission Deep Sea',
-        thumbnail: thumb('324856'),
-        rank: 3,
-        totalVotes: 12,
-        irvElimRound: 1,
-        gradeCounts: gc(0, 0, 0, 5, 0, 7),
-      },
-    ],
-    condorcet: [
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 12,
-        pairwiseWins: 5,
-        gradeCounts: gc(7, 0, 0, 0, 5, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 2,
-        totalVotes: 12,
-        pairwiseWins: 4,
-        gradeCounts: gc(0, 7, 0, 0, 0, 5),
-      },
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 3,
-        totalVotes: 12,
-        pairwiseWins: 3,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'spirit',
-        name: 'Spirit Island',
-        thumbnail: thumb('162886'),
-        rank: 4,
-        totalVotes: 12,
-        pairwiseWins: 2,
-        gradeCounts: gc(0, 5, 0, 7, 0, 0),
-      },
-      {
-        id: 'forbidden',
-        name: 'Forbidden Island',
-        thumbnail: thumb('65244'),
-        rank: 5,
-        totalVotes: 12,
-        pairwiseWins: 1,
-        gradeCounts: gc(0, 0, 5, 0, 7, 0),
-      },
-      {
-        id: 'crew',
-        name: 'The Crew: Mission Deep Sea',
-        thumbnail: thumb('324856'),
-        rank: 6,
-        totalVotes: 12,
-        pairwiseWins: 0,
-        gradeCounts: gc(0, 0, 0, 5, 0, 7),
-      },
-    ],
-    condorcetParadox: false,
-    dictator: d([
-      {
-        id: 'brass',
-        name: 'Brass Birmingham',
-        thumbnail: thumb('224517'),
-        rank: 1,
-        totalVotes: 12,
-        gradeCounts: gc(7, 0, 0, 0, 5, 0),
-      },
-      {
-        id: 'code',
-        name: 'Codenames',
-        thumbnail: thumb('178900'),
-        rank: 2,
-        totalVotes: 12,
-        gradeCounts: gc(0, 7, 0, 0, 0, 5),
-      },
-      {
-        id: 'pan',
-        name: 'Pandemic',
-        thumbnail: thumb('30549'),
-        rank: 3,
-        totalVotes: 12,
-        gradeCounts: gc(5, 0, 7, 0, 0, 0),
-      },
-      {
-        id: 'spirit',
-        name: 'Spirit Island',
-        thumbnail: thumb('162886'),
-        rank: 4,
-        totalVotes: 12,
-        gradeCounts: gc(0, 5, 0, 7, 0, 0),
-      },
-      {
-        id: 'forbidden',
-        name: 'Forbidden Island',
-        thumbnail: thumb('65244'),
-        rank: 5,
-        totalVotes: 12,
-        gradeCounts: gc(0, 0, 5, 0, 7, 0),
-      },
-      {
-        id: 'crew',
-        name: 'The Crew: Mission Deep Sea',
-        thumbnail: thumb('324856'),
-        rank: 6,
-        totalVotes: 12,
-        gradeCounts: gc(0, 0, 0, 5, 0, 7),
-      },
-    ]),
-    dictatorName: 'Morgan',
-  },
+  ballotName: 'Cloned Slate',
+  officialMethod: 'borda',
+  candidates: [C.brass, C.pandemic, C.codenames, C.spirit, C.forbidden, C.crew],
+  ballots: [
+    ...block(7, 'Brass-fan', {
+      brass: 'excellent',
+      pandemic: 'fair',
+      codenames: 'poor',
+      spirit: 'fair',
+      forbidden: 'fair',
+      crew: 'poor',
+    }),
+    ...block(4, 'Pandemic-fan', {
+      pandemic: 'excellent',
+      spirit: 'verygood',
+      forbidden: 'verygood',
+      crew: 'verygood',
+      brass: 'good',
+      codenames: 'poor',
+    }),
+    ballot('Morgan', {
+      pandemic: 'excellent',
+      spirit: 'verygood',
+      forbidden: 'verygood',
+      crew: 'verygood',
+      brass: 'good',
+      codenames: 'poor',
+    }),
+  ],
 };
 
-// Public scenarios surfaced on the home page, ordered by "wow factor."
-// Each is a voting-theory demo, not an empty-state fixture.
-export const MOCK_SCENARIOS: MockScenario[] = [
+// STAR Bullet Voting — Honest: Pandemic has the highest score (wins MJ) but
+// STAR's runoff is rank-based — Brass beats Pandemic head-to-head, so STAR
+// picks Brass despite the lower score. Companion shows what happens when the
+// Brass-fans bullet-vote.
+const starBulletHonest: ScenarioDef = {
+  id: 'mock-star-bullet-honest',
+  label: 'STAR Bullet Voting — Honest',
+  description:
+    'Pandemic has the highest score (wins MJ). But STAR’s runoff is rank-based: Brass-fans + Catan-fans both prefer Brass over Pandemic head-to-head, and Brass wins STAR.',
+  related: { id: 'mock-star-bullet-strategic', label: 'STAR Bullet Voting — Strategic' },
+  ballotName: 'Heavy-Game Faction Votes Honestly',
+  officialMethod: 'star',
+  candidates: [C.brass, C.pandemic, C.catan],
+  ballots: [
+    ...block(5, 'Brass-fan', { brass: 'excellent', pandemic: 'verygood', catan: 'poor' }),
+    ...block(3, 'Pandemic-fan', { pandemic: 'excellent', catan: 'good', brass: 'poor' }),
+    ...block(2, 'Catan-fan', { catan: 'excellent', brass: 'good', pandemic: 'average' }),
+    ballot('Sam', { catan: 'excellent', brass: 'good', pandemic: 'average' }),
+  ],
+};
+
+// STAR Bullet Voting — Strategic: Brass-fans bullet-vote Brass=E, Pandemic=P,
+// Catan=P. Pandemic's score collapses; the new runoff is Brass vs Catan, and
+// Pandemic-fans (who now equally hate Brass and Catan) lean Catan. The
+// Brass-fans' strategy elected their LEAST-favorite game.
+const starBulletStrategic: ScenarioDef = {
+  id: 'mock-star-bullet-strategic',
+  label: 'STAR Bullet Voting — Strategic',
+  description:
+    'Brass-fans bullet-vote, burying both rivals at Poor. Pandemic falls out of the runoff — but the new Brass vs Catan runoff hands the win to Catan, the Brass-fans’ least-favorite game.',
+  related: { id: 'mock-star-bullet-honest', label: 'STAR Bullet Voting — Honest' },
+  ballotName: 'Heavy-Game Faction Bullet-Votes',
+  officialMethod: 'star',
+  candidates: [C.brass, C.pandemic, C.catan],
+  ballots: [
+    ...block(5, 'Brass-fan-bullet', { brass: 'excellent', pandemic: 'poor', catan: 'poor' }),
+    ...block(3, 'Pandemic-fan', { pandemic: 'excellent', catan: 'good', brass: 'poor' }),
+    ...block(2, 'Catan-fan', { catan: 'excellent', brass: 'good', pandemic: 'average' }),
+    ballot('Sam', { catan: 'excellent', brass: 'good', pandemic: 'average' }),
+  ],
+};
+
+// DH3 — Dark Horse Pathology: three factions all bury each other's favorites.
+// Tokaido, the bland fourth, is everyone's second choice and slips through.
+// Six of eight methods crown Tokaido. IRV is the lone survivor.
+const darkHorse3: ScenarioDef = {
+  id: 'mock-dh3',
+  label: 'Dark Horse Pathology',
+  description:
+    "Three factions bury each other's favorites — and elect a game nobody actually wanted. Tokaido is everyone's second choice and nobody's first; six of eight methods crown it. IRV is the lone survivor.",
+  ballotName: 'Three Factions, One Dark Horse',
+  officialMethod: 'borda',
+  candidates: [C.brass, C.pandemic, C.catan, C.tokaido],
+  ballots: [
+    ...block(4, 'Brass-fan', { brass: 'excellent', pandemic: 'poor', catan: 'poor', tokaido: 'good' }),
+    ...block(3, 'Pandemic-fan', { pandemic: 'excellent', brass: 'poor', catan: 'poor', tokaido: 'good' }),
+    ...block(3, 'Catan-fan', { catan: 'excellent', brass: 'poor', pandemic: 'poor', tokaido: 'good' }),
+    ballot('Jordan', { catan: 'excellent', brass: 'poor', pandemic: 'poor', tokaido: 'good' }),
+  ],
+};
+
+// ─── Public ordering ─────────────────────────────────────────────────────────
+const PUBLIC_DEFS: ScenarioDef[] = [
   diverge,
   tennessee,
   condorcetCycle,
@@ -5107,15 +561,41 @@ export const MOCK_SCENARIOS: MockScenario[] = [
   bordaStrategic,
   teamingBefore,
   teamingAfter,
+  starBulletHonest,
+  starBulletStrategic,
+  darkHorse3,
   tie,
   agree,
 ];
 
 // Admin-only scenarios. Empty/degenerate-state fixtures plus scenarios whose
 // voting-theory payoff is too thin for the public showcase.
-export const ADMIN_MOCK_SCENARIOS: MockScenario[] = [oneVote, noVotes, vetoOneSurvivor];
+const ADMIN_DEFS: ScenarioDef[] = [oneVote, noVotes, vetoOneSurvivor];
 
-// Full set for id lookups (tally page still needs to resolve admin IDs).
+// ─── Realization ─────────────────────────────────────────────────────────────
+// Tallies are computed once at module load. The cost is small (eight rankers
+// over ~15 votes each, ~20 scenarios) and pays off as identity stability:
+// getMockScenario(id) returns the same object on every call, which the tally
+// page's reactivity needs.
+function realizeScenario(def: ScenarioDef): MockScenario {
+  _seq = 0;
+  const votes = def.ballots.map(realize);
+  const tally = buildTally(
+    { ballotId: 0, ballotName: def.ballotName, officialMethod: def.officialMethod },
+    def.candidates as Candidate[],
+    votes
+  );
+  return {
+    id: def.id,
+    label: def.label,
+    description: def.description,
+    tally,
+    ...(def.related && { related: def.related }),
+  };
+}
+
+export const MOCK_SCENARIOS: MockScenario[] = PUBLIC_DEFS.map(realizeScenario);
+export const ADMIN_MOCK_SCENARIOS: MockScenario[] = ADMIN_DEFS.map(realizeScenario);
 export const ALL_MOCK_SCENARIOS: MockScenario[] = [...MOCK_SCENARIOS, ...ADMIN_MOCK_SCENARIOS];
 
 export function getMockScenario(id: string): MockScenario | undefined {

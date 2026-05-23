@@ -1,3 +1,4 @@
+export { buildTally, type TallyMeta } from './build-tally';
 export { rankBorda } from './borda';
 export { rankCondorcet } from './condorcet';
 export { rankDictator } from './dictator';

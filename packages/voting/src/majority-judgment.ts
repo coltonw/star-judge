@@ -118,5 +118,18 @@ export function rankMajorityJudgment(candidates: Candidate[], votes: Vote[]): Ra
 
   ranked.sort((a, b) => (compareDistances(a._distances, b._distances) ? -1 : 1));
 
-  return ranked.map(({ _distances: _, ...c }, i) => ({ ...c, rank: i + 1 }));
+  // Candidates with identical distance arrays are genuinely tied — the MJ
+  // tiebreaker has nothing left to distinguish them. Give them the same rank.
+  return ranked.map(({ _distances, ...c }) => ({
+    ...c,
+    rank: ranked.findIndex((s) => distancesEqual(s._distances, _distances)) + 1,
+  }));
+}
+
+function distancesEqual(a: DistancePair[], b: DistancePair[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i][0] !== b[i][0] || a[i][1] !== b[i][1]) return false;
+  }
+  return true;
 }

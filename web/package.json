@@ -14,7 +14,8 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
-		"@star-judge/shared": "workspace:*"
+		"@star-judge/shared": "workspace:*",
+		"@star-judge/voting": "workspace:*"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^7.0.1",

@@ -1,6 +1,6 @@
 import { type Candidate, GRADE_VALUES, GRADES, type Grade, type RankedCandidate, type Vote } from '@star-judge/shared';
 import { buildGradeCounts } from './shared/grade-counter';
-import { pairwiseWinner } from './shared/pairwise';
+import { headToHead, pairwiseWinner } from './shared/pairwise';
 
 interface ScoredCandidate extends Candidate {
   score: number;
@@ -64,9 +64,14 @@ export function rankStar(candidates: Candidate[], votes: Vote[]): RankedCandidat
   const otherFinalists = finalists.filter((c) => c.id !== winner.id);
   const finalOrder = [winner, ...otherFinalists, ...others];
 
-  return finalOrder.map((c, i) => ({
+  // Two candidates are genuinely tied in STAR only when their starScore is
+  // equal AND their pairwise head-to-head is also 0 — i.e., the runoff has
+  // nothing to distinguish them. (Equal score but a non-zero pairwise means
+  // the runoff broke the tie.)
+  return finalOrder.map((c) => ({
     ...c,
-    rank: i + 1,
+    rank:
+      finalOrder.findIndex((s) => s.score === c.score && headToHead(votes, s.id, c.id) === 0) + 1,
     totalVotes: votes.length,
     starScore: c.score,
     inRunoff: finalistIds.has(c.id),
